@@ -1,3 +1,10 @@
+[package]
+name = "memory-region"
+version = "0.0.1"
+description = "An abstraction over the Region type that supports reusing deallocated memory."
+repository = "https://github.com/NatLabs/memory-region"
+keywords = [ "region", "memory", "bytes", "deallocate" ]
+
 [dependencies]
 base = "0.10.0"
 stableheapbtreemap = "1.3.0"

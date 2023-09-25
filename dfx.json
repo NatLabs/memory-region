@@ -1,5 +1,11 @@
 {
     "version": 1,
+    "canisters": {
+        "actor_test" : {
+            "main" :"./tests/MemoryRegion.ActorTest.mo",
+            "type" :"motoko"
+        }
+    },
     "defaults": {
         "build": {
             "packtool": "mops sources",

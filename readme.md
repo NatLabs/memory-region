@@ -1,12 +1,28 @@
-## [New Motoko Library]
-This template is a version of [motoko-library-template](https://github.com/kritzcreek/motoko-library-template) that uses the [motoko-unit-tests](https://github.com/krpeacock/motoko-unit-tests) library in the [tests/utils](./tests/utils/ActorSpec.mo) directory
+## Memory Region
+An abstraction over the native Region type in motoko that allows users to reuse deallocated memory segments
 
-### Makefile Commands
-- `make test` 
-  - runs your motoko tests by interpreting the code with the motoko compiler
-  - Tests files have to be in the `/tests` directory and end with `.Test.mo`
-- `make doc` 
-  - creates html and markdown documentation from your inline comments (comments starting with 3 backslashes `///`)
+### Usage
+```motoko
 
-### Github Actions
-- Actions for running tests every time there is a push or pull request to the `main` branch
+  import MemoryRegion "mo:memory-region/MemoryRegion";
+
+  let memory_region = MemoryRegion.new();
+
+  let bytes = 100
+  let pointer = MemoryRegion.allocate(memory_region, bytes);
+
+  assert pointer == (0, bytes);
+
+  let p2 = MemoryRegion.allocate(memory_region, 300);
+  assert p2 == (100, 300);
+
+  let p3 = MemoryRegion.allocate(memory_region, 100);
+  assert p3 == (400, 100);
+
+  let p4 = MemoryRegion.allocate(memory_region, 100);
+  assert p4 == (500, 100);
+
+  MemoryRegion.deallocate(memory_region, p2);
+  
+
+```

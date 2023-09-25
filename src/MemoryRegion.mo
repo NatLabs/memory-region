@@ -44,11 +44,37 @@ module {
         };
     };
 
+    public func get_free_memory(self : MemoryRegion) : [(Nat, Nat)] {
+        let iter = Iter.map<((Nat, Nat), ()), (Nat, Nat)>(
+            BTree.entries(self.free_memory),
+            func ((key, ()): ((Nat, Nat), ())): (Nat, Nat){
+                key
+            }
+        );
+
+        Array.tabulate<(Nat, Nat)>(
+            BTree.size(self.free_memory),
+            func (_: Nat): (Nat, Nat) {
+                let ?n = iter.next() else Prelude.unreachable();
+                n
+            }
+        );
+    };
+
     public type SizeInfo = {
+        /// Number of pages allocated. (1 page = 64KB)
         pages : Nat;
+
+        /// Number of bytes allocated including deallocated bytes.
         size : Nat;
+
+        /// Total number of bytes available for allocation from allocated pages.
         capacity : Nat;
+
+        /// Total number of bytes allocated and in use.
         allocated : Nat;
+
+        /// Total number of bytes deallocated.
         deallocated : Nat;
     };
 
