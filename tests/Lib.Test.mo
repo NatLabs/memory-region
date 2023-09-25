@@ -1,17 +1,32 @@
 // @testmode wasi
+import Buffer "mo:base/Buffer";
 import Debug "mo:base/Debug";
 import Iter "mo:base/Iter";
-import { test; suite } "mo:test";
 
-import Lib "../src";
+import { test; suite } "mo:test";
+import Fuzz "mo:fuzz";
+
+import MemoryRegion "../src/MemoryRegion";
 
 suite(
-    "Lib Test",
+    "MemoryRegion",
     func() {
         test(
-            "greet() fn works",
+            "Test allocation",
             func() {
-                assert Lib.greet("world") == "Hello, world!"
+                let memory_region = MemoryRegion.new();
+                let pointers = Buffer.Buffer<MemoryRegion.Pointer>(8);
+
+                let fuzzer = Fuzz.fromTime();
+
+                for (i in Iter.range(0, 100)){
+                    let bytes = fuzzer.nat.randomRange(8 * 1024, 1024 ** 3);
+                    let #ok(pointer) = MemoryRegion.allocate(memory_region, bytes) else return assert false;
+                    pointers.add(pointer);
+                };
+                
+                // assert MemoryRegion.size(memory_region) > 0;
+                assert true
             },
         );
     },
