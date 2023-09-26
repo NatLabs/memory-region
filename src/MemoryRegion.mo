@@ -44,7 +44,7 @@ module {
         };
     };
 
-    public func get_free_memory(self : MemoryRegion) : [(Nat, Nat)] {
+    public func getFreeMemory(self : MemoryRegion) : [(Nat, Nat)] {
         let iter = Iter.map<((Nat, Nat), ()), (Nat, Nat)>(
             BTree.entries(self.free_memory),
             func ((key, ()): ((Nat, Nat), ())): (Nat, Nat){
@@ -129,8 +129,6 @@ module {
     public func deallocate(allocator : MemoryRegion, ptr : Pointer) : Result<(), Text> {
         let (offset, bytes) = ptr;
 
-        let region_pages = Region.size(allocator.region);
-
         let { size = allocator_size } = size_info(allocator);
 
         if (offset + bytes > allocator_size) {
@@ -142,7 +140,7 @@ module {
         let opt_prev = BTreeUtils.getPreviousKey(allocator.free_memory, btree_offset_cmp, ptr);
         let opt_next = BTreeUtils.getNextKey(allocator.free_memory, btree_offset_cmp, ptr);
 
-        func merge_prev(prev: Pointer, curr: Pointer): Pointer {
+        func merge_prev(curr: Pointer, prev: Pointer): Pointer {
             switch(merge(prev, curr)){
                 case (?merged){ merged };
                 case (null) { curr };
@@ -152,7 +150,7 @@ module {
         func merge_next(curr: Pointer, next: Pointer): Pointer {
             switch(merge(next, curr)){
                 case (?merged){
-                    ignore BTree.delete(allocator.free_memory, btree_offset_cmp, next);
+                    let deleted =  BTree.delete(allocator.free_memory, btree_offset_cmp, next);
                     merged
                 };
                 case (null) { curr };
@@ -160,17 +158,18 @@ module {
         };
 
         let combined = switch (opt_prev, opt_next){
-            case (?prev, ?next){
-                let curr = merge_prev(prev, ptr);
+            case (?prev, ?next) {
+                let curr = merge_prev(ptr, prev);
                 merge_next(curr, next);
             };
-            case (?prev, _) {  merge_prev(ptr, prev) };
+            case (?prev, _) { merge_prev(ptr, prev) };
             case (_, ?next){ merge_next(ptr, next) };
 
             case (_) { ptr} 
         };
 
         ignore BTree.insert(allocator.free_memory, btree_offset_cmp, combined, ());
+        allocator.deallocated += bytes;
 
         #ok();
     };
@@ -182,7 +181,6 @@ module {
         
         // should only be used for lookups
         let btree_size_cmp = Utils.cmp_second_tuple_item(Nat.compare);
-        
         let opt_ceiling_key = BTreeUtils.getCeilingKey(allocator.free_memory, btree_size_cmp, (0, bytes));
         
         switch (opt_ceiling_key){
@@ -190,7 +188,7 @@ module {
 
                 let (segment, rem) = split(ceiling_ptr, bytes);
 
-                switch(rem){
+                switch(rem) {
                     case(?rem) {
                         // rem and ceiling_ptr should have the same offset.
                         ignore BTree.insert(allocator.free_memory, btree_offset_cmp, rem, ());
@@ -217,11 +215,10 @@ module {
         };
 
         let overflow = (bytes - unused) : Nat;
-
+        
         let pages_to_allocate = Utils.div_ceil(overflow, PageSize);
-
-        ignore Region.grow(allocator.region, Nat64.fromNat(pages_to_allocate));
-
+        let prev_pages = Region.grow(allocator.region, Nat64.fromNat(pages_to_allocate));
+        
         let offset = Nat64.fromNat(allocator.size);
         allocator.size += bytes;
 

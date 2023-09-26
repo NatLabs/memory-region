@@ -18,6 +18,6 @@ module {
     };
 
     public func div_ceil(n: Nat, d: Nat) : Nat {
-       n + (d - 1) / d;
+       (n + (d - 1)) / d;
     };
 };
