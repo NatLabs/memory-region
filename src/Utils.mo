@@ -1,4 +1,6 @@
 import Order "mo:base/Order";
+import Result "mo:base/Result";
+import Prelude "mo:base/Prelude";
 
 module {
     type Order = Order.Order;
@@ -16,6 +18,16 @@ module {
             cmp(a.1, b.1);
         };
     };
+
+    type Result<A, B> = Result.Result<A, B>;
+    
+    public func send_error<OldOk, NewOk, Error>(res: Result<OldOk, Error>): Result<NewOk, Error>{
+        switch (res) {
+            case (#ok(_)) Prelude.unreachable();
+            case (#err(errorMsg)) #err(errorMsg);
+        };
+    };
+    
 
     public func div_ceil(n: Nat, d: Nat) : Nat {
        (n + (d - 1)) / d;

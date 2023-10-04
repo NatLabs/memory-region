@@ -174,7 +174,7 @@ module {
         #ok();
     };
 
-    public func allocate(allocator : MemoryRegion, bytes : Nat) : Result<Pointer, Text> {
+    public func allocate(allocator : MemoryRegion, bytes : Nat) : Pointer {
         
         // must use for insertions
         let btree_offset_cmp = Utils.cmp_first_tuple_item(Nat.compare);
@@ -198,7 +198,7 @@ module {
                     };
                 };
 
-                return #ok(segment);
+                return (segment);
             };
             case (null) {}
         };
@@ -211,7 +211,7 @@ module {
             let offset = Nat64.fromNat(info.size);
             allocator.size += bytes;
 
-            return #ok((Nat64.toNat(offset), bytes));
+            return ((Nat64.toNat(offset), bytes));
         };
 
         let overflow = (bytes - unused) : Nat;
@@ -222,15 +222,29 @@ module {
         let offset = Nat64.fromNat(allocator.size);
         allocator.size += bytes;
 
-        return #ok((Nat64.toNat(offset), bytes));
+        return ((Nat64.toNat(offset), bytes));
        
     };
+    
+    public func storeBlob(self : MemoryRegion, ptr: Pointer, blob: Blob) : () {
+        let (offset, size) = ptr;
+        Region.storeBlob(self.region, Nat64.fromNat(offset), blob);
+    };
 
-    public func storeBlob(self : MemoryRegion, blob: Blob) : Pointer {
-        let #ok((offset, size)) = allocate(self, blob.size()) else return Prelude.unreachable();
+    public func addBlob(self : MemoryRegion, blob: Blob) : Pointer {
+        let (offset, size) = allocate(self, blob.size());
         Region.storeBlob(self.region, Nat64.fromNat(offset), blob);
 
         (offset, size);
+    };
+
+    public func replaceBlob(self: MemoryRegion, ptr: Pointer, blob: Blob) : ?Blob {
+        assert blob.size() == ptr.1;
+
+        let (offset, size) = ptr;
+        let old_blob = Region.loadBlob(self.region, Nat64.fromNat(offset), size);
+        Region.storeBlob(self.region, Nat64.fromNat(offset), blob);
+        ?old_blob;
     };
 
     public func loadBlob(self : MemoryRegion, ptr : Pointer) : Blob {
@@ -238,9 +252,11 @@ module {
         Region.loadBlob(self.region, Nat64.fromNat(offset), size);
     };
 
-    public func removeBlob(self : MemoryRegion, ptr : Pointer) {
+    public func removeBlob(self : MemoryRegion, ptr : Pointer) : Blob {
         let (offset, size) = ptr;
-        let #ok() = deallocate(self, ptr) else return Prelude.unreachable();
+        let old_blob = Region.loadBlob(self.region, Nat64.fromNat(offset), size);
+        let #ok() = deallocate(self, ptr) else return "";
+        old_blob;
     };  
 
 };

@@ -14,12 +14,15 @@ An abstraction over the native Region type in motoko that allows users to reuse 
 
   let blob = Blob.fromArray([1, 2, 3, 4]);
 
-  let blob_ptr = MemoryRegion.storeBlob(memory_region, blob);
+  let blob_ptr = MemoryRegion.addBlob(memory_region, blob);
   assert blob == MemoryRegion.loadBlob(memory_region, blob_ptr);
 
-  MemoryRegion.removeBlob(memory_region, blob_ptr);
+  let #ok(removed_blob) = MemoryRegion.removeBlob(memory_region, blob_ptr);
   assert MemoryRegion.getFreeMemory(memory_region) == [blob_ptr];
+  assert removed_blob == blob;
 
+  assert MemoryRegion.storeBlob(memory_region, blob) == blob_ptr;
+  assert MemoryRegion.getFreeMemory(memory_region) == [];
 ```
 
 - Using `MemoryRegion` to manage memory internally within a custom data-structure
@@ -30,13 +33,12 @@ An abstraction over the native Region type in motoko that allows users to reuse 
 
   let blob = Blob.fromArray([1, 2, 3, 4]);
 
-  let #ok(ptr) = MemoryRegion.allocate(memory_region, blob.size()) 
-    else Debug.trap("failed to allocate memory");
+  let ptr = MemoryRegion.allocate(memory_region, blob.size()) 
 
-  //     ptr -> (offset, size)
+  //     ptr -> (offset, numBytes)
   assert ptr == (0, blob.size());
 
-  Region.storeBlob(memory_region.region, ptr.0, blob);
+  MemoryRegion.storeBlob(memory_region.region, ptr, blob);
 
   assert #ok() == MemoryRegion.deallocate(memory_region, blob_ptr);
   

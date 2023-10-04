@@ -30,7 +30,7 @@ actor {
                             let bytes = fuzzer.nat.randomRange(8 * 1024, 1024 ** 2);
                             size += bytes;
 
-                            let #ok(pointer) = MemoryRegion.allocate(memory_region, bytes) else return assert false;
+                            let pointer = MemoryRegion.allocate(memory_region, bytes) else return assert false;
                             pointers.add(pointer);
                         };
 
