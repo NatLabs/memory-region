@@ -13,15 +13,16 @@ An abstraction over the native Region type in motoko that allows users to reuse 
   let memory_region = MemoryRegion.new();
 
   let blob = Blob.fromArray([1, 2, 3, 4]);
+  let blob_size = blob.size();
 
-  let blob_ptr = MemoryRegion.addBlob(memory_region, blob);
-  assert blob == MemoryRegion.loadBlob(memory_region, blob_ptr);
+  let address = MemoryRegion.addBlob(memory_region, blob);
+  assert blob == MemoryRegion.loadBlob(memory_region, address, blob_size);
 
-  let #ok(removed_blob) = MemoryRegion.removeBlob(memory_region, blob_ptr);
-  assert MemoryRegion.getFreeMemory(memory_region) == [blob_ptr];
+  let #ok(removed_blob) = MemoryRegion.removeBlob(memory_region, address, blob_size);
+  assert MemoryRegion.getFreeMemory(memory_region) == [(address, blob_size)];
   assert removed_blob == blob;
 
-  assert MemoryRegion.storeBlob(memory_region, blob) == blob_ptr;
+  assert MemoryRegion.addBlob(memory_region, blob) == address;
   assert MemoryRegion.getFreeMemory(memory_region) == [];
 ```
 
@@ -32,13 +33,11 @@ An abstraction over the native Region type in motoko that allows users to reuse 
   let memory_region = MemoryRegion.new();
 
   let blob = Blob.fromArray([1, 2, 3, 4]);
+  let blob_size = blob.size();
 
-  let ptr = MemoryRegion.allocate(memory_region, blob.size()) 
+  let address = MemoryRegion.allocate(memory_region, blob_size);
 
-  //     ptr -> (offset, numBytes)
-  assert ptr == (0, blob.size());
-
-  MemoryRegion.storeBlob(memory_region.region, ptr, blob);
+  MemoryRegion.storeBlob(memory_region.region, address, blob_size);
 
   assert #ok() == MemoryRegion.deallocate(memory_region, blob_ptr);
   

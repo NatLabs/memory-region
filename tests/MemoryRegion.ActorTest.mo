@@ -30,8 +30,8 @@ actor {
                             let bytes = fuzzer.nat.randomRange(8 * 1024, 1024 ** 2);
                             size += bytes;
 
-                            let pointer = MemoryRegion.allocate(memory_region, bytes) else return assert false;
-                            pointers.add(pointer);
+                            let address = MemoryRegion.allocate(memory_region, bytes) else return assert false;
+                            pointers.add((address, bytes));
                         };
 
                         assert MemoryRegion.size_info(memory_region) == {
@@ -52,27 +52,27 @@ actor {
                         var deallocated = _deallocated;
 
                         let p21 = pointers.get(21);
-                        assert MemoryRegion.deallocate(memory_region, p21) == #ok();
+                        assert MemoryRegion.deallocate(memory_region, p21.0, p21.1) == #ok();
                         assert MemoryRegion.getFreeMemory(memory_region) == [p21];
                         deallocated += p21.1;
 
                         let p25 = pointers.get(25);
-                        assert MemoryRegion.deallocate(memory_region, p25) == #ok();
+                        assert MemoryRegion.deallocate(memory_region, p25.0, p25.1) == #ok();
                         assert MemoryRegion.getFreeMemory(memory_region) == [p21, p25];
                         deallocated += p25.1;
 
                         let p22 = pointers.get(22);
-                        assert MemoryRegion.deallocate(memory_region, p22) == #ok();
+                        assert MemoryRegion.deallocate(memory_region, p22.0, p22.1) == #ok();
                         assert MemoryRegion.getFreeMemory(memory_region) == [(p21.0, p21.1 + p22.1), p25];
                         deallocated += p22.1;
 
                         let p24 = pointers.get(24);
-                        assert MemoryRegion.deallocate(memory_region, p24) == #ok();
+                        assert MemoryRegion.deallocate(memory_region, p24.0, p24.1) == #ok();
                         assert MemoryRegion.getFreeMemory(memory_region) == [(p21.0, p21.1 + p22.1), (p24.0, p24.1 + p25.1)];
                         deallocated += p24.1;
 
                         let p23 = pointers.get(23);
-                        assert MemoryRegion.deallocate(memory_region, p23) == #ok();
+                        assert MemoryRegion.deallocate(memory_region, p23.0, p23.1) == #ok();
                         assert MemoryRegion.getFreeMemory(memory_region) == [(p21.0, p21.1 + p22.1 + p23.1 + p24.1 + p25.1)];
                         deallocated += p23.1;
 
