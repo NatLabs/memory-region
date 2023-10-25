@@ -22,8 +22,7 @@ module MemoryRegion {
     public type MemoryRegion = {
         region : Region;
 
-        /// The free memory field consists of a BTree data-structure that stores free memory pointer.
-        /// The key is a tuple of the address index and the size of the memory pointer while the value is left empty.
+        /// The free memory type is a BTree data-structure that stores free memory pointer.
         var free_memory : FreeMemory;
 
         /// Total number of deallocated bytes.
@@ -47,7 +46,6 @@ module MemoryRegion {
             var pages = 0;
         };
 
-        ignore Region.grow(allocator.region, 2);
         allocator;
     };
 
