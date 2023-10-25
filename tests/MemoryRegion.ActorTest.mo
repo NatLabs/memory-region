@@ -90,7 +90,7 @@ actor {
                             capacity = pages * 64 * 1024;
                         };
 
-                        assert MemoryRegion.size_info(memory_region) == size_info
+                        assert MemoryRegion.size_info(memory_region) == size_info;
                     },
                 );
             },
