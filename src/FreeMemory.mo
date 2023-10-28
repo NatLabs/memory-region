@@ -18,19 +18,19 @@ module FreeMemory {
     let { nhash } = Set;
 
     public type FreeMemory = {
-        indexes : BTree<Nat, Nat>;
+        addresses : BTree<Nat, Nat>;
         sizes : BTree<Nat, Set<Nat>>;
     };
 
     public func new() : FreeMemory {
         {
-            indexes = BTree.init(null);
+            addresses = BTree.init(null);
             sizes = BTree.init(null);
         };
     };
 
     func remove_sync(self : FreeMemory, address : Nat){
-        let opt_size = BTree.delete(self.indexes, Nat.compare, address);
+        let opt_size = BTree.delete(self.addresses, Nat.compare, address);
 
         let size = switch (opt_size) {
             case (?size) size;
@@ -48,7 +48,7 @@ module FreeMemory {
     };
 
     func replace_sync(self : FreeMemory, address : Nat, size : Nat) : ?Nat {
-        let opt_prev_size = BTree.insert<Nat, Nat>(self.indexes, Nat.compare, address, size);
+        let opt_prev_size = BTree.insert<Nat, Nat>(self.addresses, Nat.compare, address, size);
 
         switch(opt_prev_size){
             case (?prev_size){
@@ -75,7 +75,7 @@ module FreeMemory {
     };
 
     func delete_sync(self:  FreeMemory, address : Nat) {
-        let ?size = BTree.delete(self.indexes, Nat.compare, address) else return;
+        let ?size = BTree.delete(self.addresses, Nat.compare, address) else return;
 
         let ?set = BTree.get(self.sizes, Nat.compare, size) else Debug.trap("MemoryRegion delete_sync: size not found in sizes map");
 
@@ -96,8 +96,8 @@ module FreeMemory {
     };
 
     public func reclaim(self : FreeMemory, address : Nat, size : Nat) {
-        let opt_prev = BTreeUtils.getPrevious(self.indexes, Nat.compare, address);
-        let opt_next = BTreeUtils.getNext(self.indexes, Nat.compare, address);
+        let opt_prev = BTreeUtils.getPrevious(self.addresses, Nat.compare, address);
+        let opt_next = BTreeUtils.getNext(self.addresses, Nat.compare, address);
 
         func merge_prev(curr : Pointer, prev : Pointer) : Pointer {
             switch (merge(prev, curr)) {
@@ -149,7 +149,7 @@ module FreeMemory {
     };
 
     public func get_pointer(self : FreeMemory, size_needed : Nat) : ?(address: Nat) {
-        let opt_ceiling = BTreeUtils.getCeiling(self.indexes, Nat.compare, size_needed);
+        let opt_ceiling = BTreeUtils.getCeiling(self.addresses, Nat.compare, size_needed);
 
         switch (opt_ceiling) {
             case (null) { null };
@@ -178,23 +178,23 @@ module FreeMemory {
 
     public func display(self: FreeMemory): {
         sizes: [(Nat, [Nat])];
-        indexes: [(Nat, Nat)]
+        addresses: [(Nat, Nat)]
     }{
         {
-            indexes = indexes(self);
+            addresses = addresses(self);
             sizes = sizes(self);
         }
     };
 
     public func toArray(self: FreeMemory): [(Nat, Nat)] {
-        indexes(self);
+        addresses(self);
     };
 
-    public func indexes(self: FreeMemory): [(Nat, Nat)] {
-        let iter = BTree.entries(self.indexes);
+    public func addresses(self: FreeMemory): [(Nat, Nat)] {
+        let iter = BTree.entries(self.addresses);
 
         Array.tabulate<(Nat, Nat)>(
-            BTree.size(self.indexes),
+            BTree.size(self.addresses),
             func(_ : Nat) : (Nat, Nat) {
                 let ?n = iter.next() else Prelude.unreachable();
                 n;

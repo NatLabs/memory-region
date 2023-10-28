@@ -16,7 +16,7 @@ module {
         let bench = Bench.Bench();
 
         bench.name("Region vs MemoryRegion");
-        bench.description("Benchmarking the performance with 100k entries");
+        bench.description("Benchmarking the performance with 10k entries");
 
         bench.rows(["Region", "MemoryRegion"]);
         bench.cols(["addBlob()", "removeBlob()", "addBlob() after deallocating"]);
@@ -29,7 +29,7 @@ module {
 
                 case ("Region", "addBlob()") {
 
-                    for (i in Iter.range(0, 99_999)){
+                    for (i in Iter.range(0, 9_999)){
                         if ((Nat64.toNat(Region.size(region)) * (2 ** 16)) < (i * 10) + 10) {
                             ignore Region.grow(region, 1);
                         };
@@ -41,15 +41,15 @@ module {
                 case ("Region", "removeBlob()" or "addBlob() after deallocating"){ };
 
                 case ("MemoryRegion", "addBlob()" or "addBlob() after deallocating") {
-                    for (i in Iter.range(0, 99_999)) {
+                    for (i in Iter.range(0, 9_999)) {
                         ignore MemoryRegion.addBlob(memory_region, "\ff\ff\ff\ff\ff\ff\ff\ff\ff\ff");
                     };
                 };
 
                 case ("MemoryRegion", "removeBlob()"){
-                    for (i in Iter.range(0, 99_999)) {
-                        let double = i * 4;
-                        let j = (double % 100_000) + (double / 100_000);
+                    for (i in Iter.range(0, 9_999)) {
+                        let double = i * 2;
+                        let j = (double % 10_000) + (double / 10_000);
                         ignore MemoryRegion.removeBlob(memory_region, j * 10, 10);
                     };
                 };
