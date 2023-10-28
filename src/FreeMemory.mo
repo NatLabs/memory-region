@@ -1,3 +1,4 @@
+import Array "mo:base/Array";
 import Result "mo:base/Result";
 import Prelude "mo:base/Prelude";
 import Nat "mo:base/Nat";
@@ -40,16 +41,25 @@ module FreeMemory {
 
         let set = switch (opt_set) {
             case (?set) { set };
-            case (null) Prelude.unreachable();
+            case (null) Debug.trap("MemoryRegion: size not found in sizes map");
         };
 
         ignore Set.remove<Nat>(set, nhash, address);
     };
 
-    func put_sync(self : FreeMemory, address : Nat, size : Nat) {
-        ignore BTree.insert<Nat, Nat>(self.indexes, Nat.compare, address, size);
-        let opt_set = BTree.get(self.sizes, Nat.compare, size);
+    func replace_sync(self : FreeMemory, address : Nat, size : Nat) : ?Nat {
+        let opt_prev_size = BTree.insert<Nat, Nat>(self.indexes, Nat.compare, address, size);
 
+        switch(opt_prev_size){
+            case (?prev_size){
+                let ?set = BTree.get(self.sizes, Nat.compare, prev_size) else Debug.trap("MemoryRegion: size not found in sizes map");
+                ignore Set.remove<Nat>(set, nhash, address);
+            };
+            case (_){};
+        };
+
+        let opt_set = BTree.get(self.sizes, Nat.compare, size);
+    
         let set = switch (opt_set) {
             case (?set) set;
             case (null) {
@@ -60,6 +70,16 @@ module FreeMemory {
         };
 
         ignore Set.put<Nat>(set, nhash, address);
+
+        return opt_prev_size;
+    };
+
+    func delete_sync(self:  FreeMemory, address : Nat) {
+        let ?size = BTree.delete(self.indexes, Nat.compare, address) else return;
+
+        let ?set = BTree.get(self.sizes, Nat.compare, size) else Debug.trap("MemoryRegion delete_sync: size not found in sizes map");
+
+        ignore Set.remove<Nat>(set, nhash, address);
     };
 
     func merge(a: Pointer, b: Pointer): ?Pointer {
@@ -89,7 +109,7 @@ module FreeMemory {
         func merge_next(curr : Pointer, next : Pointer) : Pointer {
             switch (merge(next, curr)) {
                 case (?merged) {
-                    let deleted = BTree.delete(self.indexes, Nat.compare, next.0);
+                    delete_sync(self, next.0);
                     merged;
                 };
                 case (null) { curr };
@@ -109,7 +129,7 @@ module FreeMemory {
             case (_) { ptr };
         };
 
-        ignore BTree.insert(self.indexes, Nat.compare, combined.0, combined.1);
+        ignore replace_sync(self, combined.0, combined.1);
     };
 
     func trim_address(ptr: (Nat, Nat), size_needed : Nat) : ?(extra_address: Nat) {
@@ -135,7 +155,12 @@ module FreeMemory {
             case (null) { null };
             case (?(address, size)) {
                 
-                if (size == size_needed){
+                if (size_needed > size){
+                    return null;
+                };
+
+                // Debug.print("get_pointer: size_needed = " # debug_show (size_needed) # ", ptr = " # debug_show (address, size) # "\n");
+                if (size == size_needed) {
                     remove_sync(self, address);
                     return ?address;
                 };
@@ -144,10 +169,48 @@ module FreeMemory {
                 let trimmed_address = address + split_index;
 
                 // update the size of the retrieved pointer in free memory
-                put_sync(self, address, split_index);
+                ignore replace_sync(self, address, split_index);
 
                 return ?trimmed_address;
             };
         };
+    };
+
+    public func display(self: FreeMemory): {
+        sizes: [(Nat, [Nat])];
+        indexes: [(Nat, Nat)]
+    }{
+        {
+            indexes = indexes(self);
+            sizes = sizes(self);
+        }
+    };
+
+    public func toArray(self: FreeMemory): [(Nat, Nat)] {
+        indexes(self);
+    };
+
+    public func indexes(self: FreeMemory): [(Nat, Nat)] {
+        let iter = BTree.entries(self.indexes);
+
+        Array.tabulate<(Nat, Nat)>(
+            BTree.size(self.indexes),
+            func(_ : Nat) : (Nat, Nat) {
+                let ?n = iter.next() else Prelude.unreachable();
+                n;
+            },
+        );
+    };
+
+    public func sizes(self: FreeMemory) : [(Nat, [Nat])] {
+        let iter = BTree.entries(self.sizes);
+
+        Array.tabulate<(Nat, [Nat])>(
+            BTree.size(self.sizes),
+            func(_ : Nat) : (Nat, [Nat]) {
+                let ?entry = iter.next() else Prelude.unreachable();
+                (entry.0, Set.toArray(entry.1));
+            },
+        );
     };
 };

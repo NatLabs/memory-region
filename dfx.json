@@ -4,10 +4,6 @@
         "actor_test" : {
             "main" :"tests/MemoryRegion.ActorTest.mo",
             "type" :"motoko"
-        },
-        "benchmarks": {
-            "main": "benchmarks/MemoryRegion.bench.mo",
-            "type": "motoko"
         }
     },
     "defaults": {

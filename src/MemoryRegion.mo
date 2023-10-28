@@ -50,16 +50,7 @@ module MemoryRegion {
     };
 
     public func getFreeMemory(self : MemoryRegion) : [(Nat, Nat)] {
-
-        let iter = BTree.entries(self.free_memory.indexes);
-
-        Array.tabulate<(Nat, Nat)>(
-            BTree.size(self.free_memory.indexes),
-            func(_ : Nat) : (Nat, Nat) {
-                let ?n = iter.next() else Prelude.unreachable();
-                n;
-            },
-        );
+        FreeMemory.toArray(self.free_memory);
     };
 
     public func size(self : MemoryRegion) : Nat {
@@ -112,7 +103,7 @@ module MemoryRegion {
         };
 
         FreeMemory.reclaim(self.free_memory, address, size);
-        self.deallocated += size;
+        self.deallocated += size; // move to free memory
 
         #ok();
     };
@@ -120,24 +111,14 @@ module MemoryRegion {
     public func allocate(self : MemoryRegion, bytes : Nat) : Nat {
 
         switch (FreeMemory.get_pointer(self.free_memory, bytes)){
-            case (?ptr){ return ptr };
+            case (?ptr){ 
+                self.deallocated -= bytes;
+                return ptr;
+            };
             case (null) {}
         };
 
-        let unused = (capacity(self) - self.size) : Nat;
-
-        if (bytes < unused) {
-            let address = self.size;
-            self.size += bytes;
-
-            return address;
-        };
-
-        let overflow = (bytes - unused) : Nat;
-
-        let pages_to_allocate = Utils.div_ceil(overflow, PageSize);
-        let prev_pages = Region.grow(self.region, Nat64.fromNat(pages_to_allocate));
-        self.pages += pages_to_allocate;
+        growIfNeeded(self, bytes);
 
         let address = self.size;
         self.size += bytes;
@@ -149,6 +130,21 @@ module MemoryRegion {
     public func grow(self : MemoryRegion, pages : Nat) : Nat {
         let prev_pages = Region.grow(self.region, Nat64.fromNat(pages));
         Nat64.toNat(prev_pages);
+    };
+
+    /// Grows the memory region if needed to allocate the given number of `bytes`.
+    public func growIfNeeded(self: MemoryRegion, bytes: Nat){
+        let unused = (capacity(self) - self.size) : Nat;
+
+        if (bytes <= unused) {
+            return;
+        };
+
+        let overflow = (bytes - unused) : Nat;
+
+        let pages_to_allocate = Utils.div_ceil(overflow, PageSize);
+        let prev_pages = Region.grow(self.region, Nat64.fromNat(pages_to_allocate));
+        self.pages += pages_to_allocate;
     };
 
     /// Resets the memory region to its initial state.
