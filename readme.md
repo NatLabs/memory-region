@@ -9,7 +9,7 @@ While Motoko's `Region` type effectively isolates sections of stable memory, it 
   - `removeBlob` - Extracts the blob at the given address from the `Region` and frees up the associated memory block.
 
 ## How it works
-Internally, the `MemoryRegion` stores data in a `Region`, updating a size counter that keeps track of the total allocated memory, and two btree maps for managing the free memory blocks.
+Internally, the `MemoryRegion` stores data in a `Region`, updating a size counter that keeps track of the total allocated memory, and two [btree](https://github.com/canscale/StableHeapBTreeMap) maps for managing the free memory blocks.
 The first map orderes the blocks by their addresses, while the second map orders them by their sizes. This strategy enables each `MemoryRegion` to allocate and deallocate memory blocks in `O(log n)` time.
 
 ## Pros and Cons
