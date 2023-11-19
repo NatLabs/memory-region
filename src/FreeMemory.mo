@@ -1,6 +1,7 @@
 import Array "mo:base/Array";
 import Result "mo:base/Result";
 import Prelude "mo:base/Prelude";
+import Option "mo:base/Option";
 import Nat "mo:base/Nat";
 import Debug "mo:base/Debug";
 
@@ -24,54 +25,49 @@ module FreeMemory {
 
     public func new() : FreeMemory {
         {
-            addresses = BTree.init(null);
-            sizes = BTree.init(null);
+            addresses = BTree.init(?32);
+            sizes = BTree.init(?32);
         };
     };
 
-    func remove_sync(self : FreeMemory, address : Nat){
-        let opt_size = BTree.delete(self.addresses, Nat.compare, address);
-
-        let size = switch (opt_size) {
-            case (?size) size;
-            case (null) return;
-        };
-
-        let opt_set = BTree.get(self.sizes, Nat.compare, size);
-
-        let set = switch (opt_set) {
-            case (?set) { set };
-            case (null) Debug.trap("MemoryRegion: size not found in sizes map");
-        };
-
-        ignore Set.remove<Nat>(set, nhash, address);
-    };
-
+    
     func replace_sync(self : FreeMemory, address : Nat, size : Nat) : ?Nat {
         let opt_prev_size = BTree.insert<Nat, Nat>(self.addresses, Nat.compare, address, size);
 
-        switch(opt_prev_size){
+        replace_size(self, address, opt_prev_size, size);
+
+        return opt_prev_size;
+    };  
+
+    func replace_size(self: FreeMemory, address: Nat, opt_prev_size: ?Nat, new_size: Nat){
+
+        let removed_set: ?Set<Nat> = switch(opt_prev_size){
             case (?prev_size){
                 let ?set = BTree.get(self.sizes, Nat.compare, prev_size) else Debug.trap("MemoryRegion: size not found in sizes map");
                 ignore Set.remove<Nat>(set, nhash, address);
+                
+                if (Set.size(set) == 0){
+                    BTree.delete<Nat, Set<Nat>>(self.sizes, Nat.compare, prev_size);
+                }else {
+                    null
+                }
             };
-            case (_){};
+            case (_){ null; }
         };
+        
+        let opt_set = BTree.get(self.sizes, Nat.compare, new_size);
 
-        let opt_set = BTree.get(self.sizes, Nat.compare, size);
-    
-        let set = switch (opt_set) {
+        let new_size_set = switch (opt_set) {
             case (?set) set;
             case (null) {
-                let set : Set<Nat> = Set.new();
-                ignore BTree.insert(self.sizes, Nat.compare, size, set);
+                let set = Option.get(removed_set, Set.new<Nat>());
+                ignore BTree.insert(self.sizes, Nat.compare, new_size, set);
                 set;
             };
         };
 
-        ignore Set.put<Nat>(set, nhash, address);
+        ignore Set.put<Nat>(new_size_set, nhash, address);
 
-        return opt_prev_size;
     };
 
     func delete_sync(self:  FreeMemory, address : Nat) {
@@ -80,77 +76,74 @@ module FreeMemory {
         let ?set = BTree.get(self.sizes, Nat.compare, size) else Debug.trap("MemoryRegion delete_sync: size not found in sizes map");
 
         ignore Set.remove<Nat>(set, nhash, address);
+        if (Set.size(set) == 0){
+            ignore BTree.delete(self.sizes, Nat.compare, size);
+        }
     };
 
-    func merge(a: Pointer, b: Pointer): ?Pointer {
-        let (offset_a, size_a) = a;
-        let (offset_b, size_b) = b;
-
-        if (offset_a + size_a == offset_b){
-            ?(offset_a, size_a + size_b)
-        }else if (offset_b + size_b == offset_a){
-            ?(offset_b, size_a + size_b);
-        }else{
-            null
-        };
+    func can_merge_forward(address_a: Nat, size_a: Nat, address_b: Nat, size_b: Nat): Bool {
+        address_a + size_a == address_b
     };
 
     public func reclaim(self : FreeMemory, address : Nat, size : Nat) {
         if (size == 0) return;
-        
         let opt_prev = BTreeUtils.getPrevious(self.addresses, Nat.compare, address);
-        let opt_next = BTreeUtils.getNext(self.addresses, Nat.compare, address);
 
-        func merge_prev(curr : Pointer, prev : Pointer) : Pointer {
-            switch (merge(prev, curr)) {
-                case (?merged) { merged };
-                case (null) { curr };
-            };
-        };
+        let next_address = address + size;
+        let opt_next_size = BTree.get(self.addresses, Nat.compare, next_address);
 
-        func merge_next(curr : Pointer, next : Pointer) : Pointer {
-            switch (merge(next, curr)) {
-                case (?merged) {
-                    delete_sync(self, next.0);
-                    merged;
+        var address_var = address;
+        var size_var = size;
+        
+        switch (opt_prev, opt_next_size) {
+            case (?prev, ?next_size) {
+
+                if (can_merge_forward(prev.0, prev.1, address_var, size_var)){
+                    address_var := prev.0;
+                    size_var += prev.1;
                 };
-                case (null) { curr };
+
+                if (can_merge_forward(address_var, size_var, next_address, next_size)){
+                    size_var += next_size;
+                    delete_sync(self, next_address);
+                };
             };
+            case (?prev, _) {
+
+                if (can_merge_forward(prev.0, prev.1, address_var, size_var)){
+                    address_var := prev.0;
+                    size_var += prev.1;
+                };
+            };
+            case (_, ?next_size) { 
+                if (can_merge_forward(address_var, size_var, next_address, next_size)){
+                    size_var += next_size;
+                    delete_sync(self, next_address);
+                };
+
+            };
+            case (_) { };
         };
 
-        let ptr = (address, size);
-
-        let combined = switch (opt_prev, opt_next) {
-            case (?prev, ?next) {
-                let curr = merge_prev(ptr, prev);
-                merge_next(curr, next);
-            };
-            case (?prev, _) { merge_prev(ptr, prev) };
-            case (_, ?next) { merge_next(ptr, next) };
-
-            case (_) { ptr };
-        };
-
-        ignore replace_sync(self, combined.0, combined.1);
+        ignore replace_sync(self, address_var, size_var);
     };
 
-
     public func get_pointer(self : FreeMemory, size_needed : Nat) : ?(address: Nat) {
-        let opt_ceiling = BTreeUtils.getCeiling(self.addresses, Nat.compare, size_needed);
+        let opt_set = BTreeUtils.getCeiling(self.sizes, Nat.compare, size_needed);
+        let ?(size, set) = opt_set else return null;
 
-        switch (opt_ceiling) {
-            case (null) { null };
-            case (?(address, size)) {
-                
-                if (size_needed > size){
-                    return null;
-                };
+        if (Set.size(set) == 0){
+            Debug.print("display: " # debug_show (display(self)) # "\n");
+        };
+        let ?address = Set.pop(set, nhash) else Debug.trap("MemoryRegion: found empty set in sizes map. [Report this bug to the developers if you see this message]");
+            
+        assert size >= size_needed;
 
-                // Debug.print("get_pointer: size_needed = " # debug_show (size_needed) # ", ptr = " # debug_show (address, size) # "\n");
-                if (size == size_needed) {
-                    remove_sync(self, address);
-                    return ?address;
-                };
+        // Debug.print("get_pointer: size_needed = " # debug_show (size_needed) # ", ptr = " # debug_show (address, size) # "\n");
+        if (size == size_needed) {
+            delete_sync(self, address);
+            return ?address;
+        };
 
                 let split_point = (size - size_needed) : Nat;
                 let trimmed_address = address + split_point;
@@ -158,9 +151,7 @@ module FreeMemory {
                 // update the size of the retrieved pointer in free memory
                 ignore replace_sync(self, address, split_point);
 
-                return ?trimmed_address;
-            };
-        };
+        return ?trimmed_address;
     };
 
     public func display(self: FreeMemory): {
