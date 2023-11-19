@@ -1,3 +1,4 @@
+// @testmode wasi
 import Buffer "mo:base/Buffer";
 import Debug "mo:base/Debug";
 import Iter "mo:base/Iter";
@@ -84,11 +85,11 @@ suite(
             "deallocate every 2nd memory block",
             func() {
 
-                var skipped_address = 5001; // avoids starting at 0 because that is the first freed memory block
+                var skipped_address = limit + 1; // avoids starting at 0 because that is the first freed memory block
 
                 var i = 0;
 
-                while (i < 5000){
+                while (i < limit){
                     let (address, size) = pointers.get(i);
 
                     assert #ok() == MemoryRegion.deallocate(memory_region, address, size);
