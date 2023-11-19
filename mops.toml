@@ -1,6 +1,6 @@
 [package]
 name = "memory-region"
-version = "0.0.3"
+version = "0.0.4"
 description = "An abstraction over the Region type that supports reusing deallocated memory."
 repository = "https://github.com/NatLabs/memory-region"
 keywords = [ "region", "memory", "bytes", "deallocate", "collections" ]

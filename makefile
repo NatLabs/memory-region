@@ -8,6 +8,9 @@ test:
 no-warn:
 	find src -type f -name '*.mo' -print0 | xargs -0 $(shell mocv bin current)/moc -r $(shell mops sources) -Werror -wasi-system-api
 
+set-mocv-version:
+	mocv use 0.10.1
+
 docs: 
 	$(shell mocv bin current)/mo-doc
 	$(shell mocv bin current)/mo-doc --format plain

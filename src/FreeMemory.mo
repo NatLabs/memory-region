@@ -96,6 +96,8 @@ module FreeMemory {
     };
 
     public func reclaim(self : FreeMemory, address : Nat, size : Nat) {
+        if (size == 0) return;
+        
         let opt_prev = BTreeUtils.getPrevious(self.addresses, Nat.compare, address);
         let opt_next = BTreeUtils.getNext(self.addresses, Nat.compare, address);
 
@@ -132,21 +134,6 @@ module FreeMemory {
         ignore replace_sync(self, combined.0, combined.1);
     };
 
-    func trim_address(ptr: (Nat, Nat), size_needed : Nat) : ?(extra_address: Nat) {
-        let (address, size) = ptr;
-
-        if (size_needed > size) {
-            return Debug.trap("Cannot split pointer: " # debug_show (ptr) # " " # debug_show (size_needed));
-        } else if (size == size_needed) {
-            return null;
-        };
-
-        let split_index = (size - size_needed) : Nat;
-
-        let trimmed_address = address + split_index;
-
-        ?trimmed_address
-    };
 
     public func get_pointer(self : FreeMemory, size_needed : Nat) : ?(address: Nat) {
         let opt_ceiling = BTreeUtils.getCeiling(self.addresses, Nat.compare, size_needed);
@@ -165,11 +152,11 @@ module FreeMemory {
                     return ?address;
                 };
 
-                let split_index = (size - size_needed) : Nat;
-                let trimmed_address = address + split_index;
+                let split_point = (size - size_needed) : Nat;
+                let trimmed_address = address + split_point;
 
                 // update the size of the retrieved pointer in free memory
-                ignore replace_sync(self, address, split_index);
+                ignore replace_sync(self, address, split_point);
 
                 return ?trimmed_address;
             };
