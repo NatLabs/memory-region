@@ -99,7 +99,7 @@ module MemoryRegion {
     public func deallocate(self : MemoryRegion, address : Nat, size : Nat) : Result<(), Text> {
 
         if (address + size > self.size) {
-            return #err("Pointer out of bounds");
+            return #err("MemoryRegion.deallocate(): memory block out of bounds");
         };
 
         FreeMemory.reclaim(self.free_memory, address, size);
@@ -172,6 +172,7 @@ module MemoryRegion {
     public func removeBlob(self : MemoryRegion, address : Nat, size : Nat) : Blob {
         let old_blob = Region.loadBlob(self.region, Nat64.fromNat(address), size);
         let #ok() = deallocate(self, address, size) else return "";
+
         old_blob;
     };
 

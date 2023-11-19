@@ -9,7 +9,7 @@ While Motoko's `Region` type effectively isolates sections of stable memory, it 
   - `removeBlob` - Extracts the blob at the given address from the `Region` and frees up the associated memory block.
 
 ## How it works
-Internally, the `MemoryRegion` stores data in a `Region`, updating a size counter that keeps track of the total allocated memory, and two [btree](https://github.com/canscale/StableHeapBTreeMap) maps for managing the free memory blocks.
+Internally, the `MemoryRegion` stores data in a `Region`, updating a size counter that keeps track of the total allocated memory, and two btree maps for managing the free memory blocks.
 The first map orderes the blocks by their addresses, while the second map orders them by their sizes. This strategy enables each `MemoryRegion` to allocate and deallocate memory blocks in `O(log n)` time.
 
 ## Pros and Cons
@@ -73,17 +73,18 @@ Region vs MemoryRegion
 Benchmarking the performance with 10k entries
 
 
-#### Instructions
+**Instructions**
 
-|              |  addBlob() | removeBlob() | addBlob() after deallocating |
-| :----------- | ---------: | -----------: | ---------------------------: |
-| Region       |  7_219_214 |            - |                            - |
-| MemoryRegion | 11_380_427 |  171_654_817 |                  152_081_540 |
+|              |  addBlob() | removeBlob() | removeBlob() merge blocks | addBlob() reallocation |
+| :----------- | ---------: | -----------: | ------------------------: | ---------------------: |
+| Region       |  7_690_443 |        1_964 |                     3_154 |                  2_732 |
+| MemoryRegion | 12_540_675 |   90_775_947 |               239_162_910 |             84_871_033 |
+			
 
+**Heap**
 
-#### Heap
-
-|              | addBlob() | removeBlob() | addBlob() after deallocating |
-| :----------- | --------: | -----------: | ---------------------------: |
-| Region       |     9_040 |            - |                            - |
-| MemoryRegion |     9_040 |    3_213_880 |                    3_168_140 |
+|              | addBlob() | removeBlob() | removeBlob() merge blocks | addBlob() reallocation |
+| :----------- | --------: | -----------: | ------------------------: | ---------------------: |
+| Region       |     9_140 |        8_952 |                     8_952 |                  8_952 |
+| MemoryRegion |     9_140 |  -27_806_524 |                 4_217_956 |              2_326_636 |
+		
