@@ -25,7 +25,7 @@ module {
         bench.description("Benchmarking the performance with 10k entries");
 
         bench.rows(["Region", "MemoryRegion"]);
-        bench.cols(["addBlob()", "removeBlob()", "removeBlob() merge adjacent blocks", "addBlob() after deallocating"]);
+        bench.cols(["addBlob()", "removeBlob()", "removeBlob() merge blocks", "addBlob() reallocation"]);
 
         let region : Region = Region.new();
         let memory_region = MemoryRegion.new();
@@ -83,7 +83,7 @@ module {
                     }
                 };
 
-                case ("Region", "removeBlob()" or "addBlob() after deallocating" or "removeBlob() merge adjacent blocks",){ };
+                case ("Region", "removeBlob()" or "addBlob() reallocation" or "removeBlob() merge blocks",){ };
 
                 case ("MemoryRegion", "addBlob()") {
                     for ((address, _, blob) in ptrs1.vals()) {
@@ -100,7 +100,7 @@ module {
                     };
                 };
 
-                case ("MemoryRegion", "removeBlob() merge adjacent blocks"){
+                case ("MemoryRegion", "removeBlob() merge blocks"){
                     for (i in Iter.range(0, (limit / 2) - 1)) {
                         let every_2nd_index_offset_1 = (i * 2) + 1;
                        
@@ -110,7 +110,7 @@ module {
                     };
                 };
 
-                case ("MemoryRegion", "addBlob() after deallocating") {
+                case ("MemoryRegion", "addBlob() reallocation") {
                     for ((address, _, blob) in ptrs2.vals()) {
                         ignore MemoryRegion.addBlob(memory_region, blob);
                     };
