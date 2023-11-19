@@ -172,6 +172,7 @@ module MemoryRegion {
     public func removeBlob(self : MemoryRegion, address : Nat, size : Nat) : Blob {
         let old_blob = Region.loadBlob(self.region, Nat64.fromNat(address), size);
         let #ok() = deallocate(self, address, size) else return "";
+
         old_blob;
     };
 
