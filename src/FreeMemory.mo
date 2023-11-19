@@ -145,11 +145,11 @@ module FreeMemory {
             return ?address;
         };
 
-        let split_index = (size - size_needed) : Nat;
-        let trimmed_address = address + split_index;
+                let split_point = (size - size_needed) : Nat;
+                let trimmed_address = address + split_point;
 
-        // update the size of the retrieved pointer in free memory
-        ignore replace_sync(self, address, split_index);
+                // update the size of the retrieved pointer in free memory
+                ignore replace_sync(self, address, split_point);
 
         return ?trimmed_address;
     };
