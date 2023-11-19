@@ -99,7 +99,7 @@ module MemoryRegion {
     public func deallocate(self : MemoryRegion, address : Nat, size : Nat) : Result<(), Text> {
 
         if (address + size > self.size) {
-            return #err("Pointer out of bounds");
+            return #err("MemoryRegion.deallocate(): memory block out of bounds");
         };
 
         FreeMemory.reclaim(self.free_memory, address, size);
