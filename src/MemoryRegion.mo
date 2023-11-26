@@ -96,16 +96,14 @@ module MemoryRegion {
         };
     };
 
-    public func deallocate(self : MemoryRegion, address : Nat, size : Nat) : Result<(), Text> {
+    public func deallocate(self : MemoryRegion, address : Nat, size : Nat) {
 
         if (address + size > self.size) {
-            return #err("MemoryRegion.deallocate(): memory block out of bounds");
+            return Debug.trap("MemoryRegion.deallocate(): memory block out of bounds");
         };
 
         FreeMemory.reclaim(self.free_memory, address, size);
         self.deallocated += size; // move to free memory
-
-        #ok();
     };
 
     public func allocate(self : MemoryRegion, bytes : Nat) : Nat {
@@ -171,7 +169,7 @@ module MemoryRegion {
 
     public func removeBlob(self : MemoryRegion, address : Nat, size : Nat) : Blob {
         let old_blob = Region.loadBlob(self.region, Nat64.fromNat(address), size);
-        let #ok() = deallocate(self, address, size) else return "";
+        deallocate(self, address, size);
 
         old_blob;
     };

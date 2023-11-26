@@ -92,7 +92,7 @@ suite(
                 while (i < limit){
                     let (address, size) = pointers.get(i);
 
-                    assert #ok() == MemoryRegion.deallocate(memory_region, address, size);
+                    MemoryRegion.deallocate(memory_region, address, size);
 
                     switch (BTree.get(memory_region.free_memory.addresses, Nat.compare, address)) {
                         case (?retrieved_size) {
@@ -125,7 +125,7 @@ suite(
 
                 while (i < limit){
                     let (address, size) = pointers.get(i);
-                    assert #ok() == MemoryRegion.deallocate(memory_region, address, size);
+                    MemoryRegion.deallocate(memory_region, address, size);
 
                     if (BTree.has(memory_region.free_memory.addresses, Nat.compare, address)) {
                         Debug.trap("Included the freed memory block instead of merging " # debug_show (address, size) # " with " # debug_show (start_address, merged_size));
