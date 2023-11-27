@@ -42,7 +42,7 @@ The first map orderes the blocks by their addresses, while the second map orders
   let address = MemoryRegion.addBlob(memory_region, blob);
   assert blob == MemoryRegion.loadBlob(memory_region, address, blob_size);
 
-  let #ok(removed_blob) = MemoryRegion.removeBlob(memory_region, address, blob_size);
+  let removed_blob = MemoryRegion.removeBlob(memory_region, address, blob_size);
   assert MemoryRegion.getFreeMemory(memory_region) == [(address, blob_size)];
   assert removed_blob == blob;
 
@@ -63,7 +63,7 @@ The first map orderes the blocks by their addresses, while the second map orders
 
   MemoryRegion.storeBlob(memory_region.region, address, blob_size);
 
-  assert #ok() == MemoryRegion.deallocate(memory_region, blob_ptr);
+  MemoryRegion.deallocate(memory_region, blob_ptr);
   
 ```
 
@@ -77,7 +77,7 @@ Benchmarking the performance with 10k entries
 
 |              |  addBlob() | removeBlob() | removeBlob() merge blocks | addBlob() reallocation |
 | :----------- | ---------: | -----------: | ------------------------: | ---------------------: |
-| Region       |  7_690_443 |        1_964 |                     3_154 |                  2_732 |
+| Region       |  7_690_443 |        ----- |                     ----- |                  ----- |
 | MemoryRegion | 12_540_675 |   90_775_947 |               239_162_910 |             84_871_033 |
 			
 
@@ -85,6 +85,6 @@ Benchmarking the performance with 10k entries
 
 |              | addBlob() | removeBlob() | removeBlob() merge blocks | addBlob() reallocation |
 | :----------- | --------: | -----------: | ------------------------: | ---------------------: |
-| Region       |     9_140 |        8_952 |                     8_952 |                  8_952 |
-| MemoryRegion |     9_140 |  -27_806_524 |                 4_217_956 |              2_326_636 |
+| Region       |     9_140 |        ----- |                     ----- |                  ----- |
+| MemoryRegion |     9_140 |    1_735_636 |                 4_217_956 |              2_326_636 |
 		
