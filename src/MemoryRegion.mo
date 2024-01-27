@@ -6,7 +6,7 @@ import Prelude "mo:base/Prelude";
 import Nat "mo:base/Nat";
 import Debug "mo:base/Debug";
 
-import BTree "mo:stableheapbtreemap/BTree";
+import MaxBpTree "mo:augmented-btrees/MaxBpTree";
 
 import Utils "Utils";
 import FreeMemory "FreeMemory";
@@ -15,7 +15,6 @@ module MemoryRegion {
 
     public type Pointer = (address : Nat, size : Nat);
     type Result<T, E> = Result.Result<T, E>;
-    type BTree<K, V> = BTree.BTree<K, V>;
 
     public type FreeMemory = FreeMemory.FreeMemory;
 
@@ -53,15 +52,32 @@ module MemoryRegion {
         FreeMemory.toArray(self.free_memory);
     };
 
+    /// Total number of bytes allocated including deallocated bytes.
     public func size(self : MemoryRegion) : Nat {
         Nat64.toNat(Region.size(self.region));
     };
 
+    /// Total number of bytes available before the allocator needs to grow.
     public func capacity(self : MemoryRegion) : Nat {
         MemoryRegion.size(self) * PageSize;
     };
 
-    public type SizeInfo = {
+    /// Number of pages allocated. (1 page = 64KB)
+    public func pages(self : MemoryRegion) : Nat {
+        self.pages;
+    };
+
+    /// Total number of bytes allocated and in use.
+    public func allocated(self : MemoryRegion) : Nat {
+        (self.size - self.deallocated) : Nat;
+    };
+
+    /// Total number of bytes deallocated.
+    public func deallocated(self : MemoryRegion) : Nat {
+        self.deallocated;
+    };
+
+    public type MemoryInfo = {
         /// Number of pages allocated. (1 page = 64KB)
         pages : Nat;
 
@@ -78,7 +94,8 @@ module MemoryRegion {
         deallocated : Nat;
     };
 
-    public func size_info(allocator : MemoryRegion) : SizeInfo {
+    /// Information about the memory usage of the allocator.
+    public func memoryInfo(allocator : MemoryRegion) : MemoryInfo {
         let pages = Nat64.toNat(Region.size(allocator.region));
         let capacity = pages * PageSize;
 
@@ -87,7 +104,7 @@ module MemoryRegion {
 
         let allocated = (allocator.size - deallocated) : Nat;
 
-        let info : SizeInfo = {
+        let info : MemoryInfo = {
             pages;
             size;
             capacity;
@@ -99,6 +116,7 @@ module MemoryRegion {
     public func deallocate(self : MemoryRegion, address : Nat, size : Nat) {
 
         if (address + size > self.size) {
+            Debug.print(debug_show (address, size, self.size));
             return Debug.trap("MemoryRegion.deallocate(): memory block out of bounds");
         };
 
@@ -107,13 +125,12 @@ module MemoryRegion {
     };
 
     public func allocate(self : MemoryRegion, bytes : Nat) : Nat {
-
-        switch (FreeMemory.get_pointer(self.free_memory, bytes)){
-            case (?ptr){ 
+        switch (FreeMemory.reallocate(self.free_memory, bytes)) {
+            case (?address) {
                 self.deallocated -= bytes;
-                return ptr;
+                return address;
             };
-            case (null) {}
+            case (null) {};
         };
 
         growIfNeeded(self, bytes);
@@ -127,11 +144,12 @@ module MemoryRegion {
 
     public func grow(self : MemoryRegion, pages : Nat) : Nat {
         let prev_pages = Region.grow(self.region, Nat64.fromNat(pages));
+        self.pages += pages;
         Nat64.toNat(prev_pages);
     };
 
     /// Grows the memory region if needed to allocate the given number of `bytes`.
-    public func growIfNeeded(self: MemoryRegion, bytes: Nat){
+    public func growIfNeeded(self : MemoryRegion, bytes : Nat) {
         let unused = (capacity(self) - self.size) : Nat;
 
         if (bytes <= unused) {
@@ -145,6 +163,10 @@ module MemoryRegion {
         self.pages += pages_to_allocate;
     };
 
+    public func isFreed(self: MemoryRegion, address : Nat, size : Nat) : Result<Bool, Text> {
+        FreeMemory.contains(self.free_memory, address, size);
+    };
+
     /// Resets the memory region to its initial state.
     public func clear(self : MemoryRegion) {
         self.free_memory := FreeMemory.new();
@@ -155,6 +177,14 @@ module MemoryRegion {
     public func storeBlob(self : MemoryRegion, address : Nat, blob : Blob) {
         Region.storeBlob(self.region, Nat64.fromNat(address), blob);
     };
+
+    // public func storeBlobPE(self : MemoryRegion, address : Nat, blob : Blob) : Result<MemoryRegion, String> {
+    //     let result = Region.storeBlobPE(self.region, Nat64.fromNat(address), blob);
+    //     switch (result) {
+    //         case (?region) { return (?{ self with region = region }); };
+    //         case (err) { return (err); };
+    //     };
+    // };
 
     public func addBlob(self : MemoryRegion, blob : Blob) : Nat {
         let address = allocate(self, blob.size());

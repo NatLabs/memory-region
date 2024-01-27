@@ -1,9 +1,6 @@
 name: Comment Benchmarks
 
 on:
-  push:
-    branches:
-      - main
   pull_request:
     branches:
       - "*"
@@ -48,11 +45,6 @@ jobs:
           npm -g i mocv
           npm --yes -g i ic-mops
           mops i
-
-      - name: Install wasmtime
-        run: |
-          curl https://wasmtime.dev/install.sh -sSf | bash
-          echo "$HOME/.wasmtime/bin" >> $GITHUB_PATH
       
       - name: Set DFX MOC Path
         run: |

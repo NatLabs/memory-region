@@ -5,190 +5,99 @@ import Option "mo:base/Option";
 import Nat "mo:base/Nat";
 import Debug "mo:base/Debug";
 
-import Set "mo:map/Set";
-import BTree "mo:stableheapbtreemap/BTree";
-
-import BTreeUtils "BTreeUtils";
+import MaxBpTree "mo:augmented-btrees/MaxBpTree";
 
 module FreeMemory {
     public type Pointer = (address : Nat, size : Nat);
     type Result<T, E> = Result.Result<T, E>;
-    type BTree<K, V> = BTree.BTree<K, V>;
-    type Set<T> = Set.Set<T>;
 
-    let { nhash } = Set;
-
-    public type FreeMemory = {
-        addresses : BTree<Nat, Nat>;
-        sizes : BTree<Nat, Set<Nat>>;
-    };
+    public type FreeMemory = MaxBpTree.MaxBpTree<Nat, Nat>;
 
     public func new() : FreeMemory {
-        {
-            addresses = BTree.init(?32);
-            sizes = BTree.init(?32);
-        };
+        MaxBpTree.new<Nat, Nat>(?32);
     };
 
-    
-    func replace_sync(self : FreeMemory, address : Nat, size : Nat) : ?Nat {
-        let opt_prev_size = BTree.insert<Nat, Nat>(self.addresses, Nat.compare, address, size);
-
-        replace_size(self, address, opt_prev_size, size);
-
-        return opt_prev_size;
-    };  
-
-    func replace_size(self: FreeMemory, address: Nat, opt_prev_size: ?Nat, new_size: Nat){
-
-        let removed_set: ?Set<Nat> = switch(opt_prev_size){
-            case (?prev_size){
-                let ?set = BTree.get(self.sizes, Nat.compare, prev_size) else Debug.trap("MemoryRegion: size not found in sizes map");
-                ignore Set.remove<Nat>(set, nhash, address);
-                
-                if (Set.size(set) == 0){
-                    BTree.delete<Nat, Set<Nat>>(self.sizes, Nat.compare, prev_size);
-                }else {
-                    null
-                }
-            };
-            case (_){ null; }
-        };
-        
-        let opt_set = BTree.get(self.sizes, Nat.compare, new_size);
-
-        let new_size_set = switch (opt_set) {
-            case (?set) set;
-            case (null) {
-                let set = Option.get(removed_set, Set.new<Nat>());
-                ignore BTree.insert(self.sizes, Nat.compare, new_size, set);
-                set;
-            };
-        };
-
-        ignore Set.put<Nat>(new_size_set, nhash, address);
-
+    func can_merge_forward(address_a : Nat, size_a : Nat, address_b : Nat, size_b : Nat) : Bool {
+        address_a + size_a == address_b;
     };
-
-    func delete_sync(self:  FreeMemory, address : Nat) {
-        let ?size = BTree.delete(self.addresses, Nat.compare, address) else return;
-
-        let ?set = BTree.get(self.sizes, Nat.compare, size) else Debug.trap("MemoryRegion delete_sync: size not found in sizes map");
-
-        ignore Set.remove<Nat>(set, nhash, address);
-        if (Set.size(set) == 0){
-            ignore BTree.delete(self.sizes, Nat.compare, size);
-        }
-    };
-
-    func can_merge_forward(address_a: Nat, size_a: Nat, address_b: Nat, size_b: Nat): Bool {
-        address_a + size_a == address_b
+    func compare(a : Nat, b : Nat) : Int8 {
+        if (a > b) {
+            return 1;
+        } else if (a < b) {
+            return -1;
+        } else {
+            return 0;
+        };
     };
 
     public func reclaim(self : FreeMemory, address : Nat, size : Nat) {
         if (size == 0) return;
-        let opt_prev = BTreeUtils.getPrevious(self.addresses, Nat.compare, address);
+
+        // retrieves the block with the address just before the one we are trying to reclaim
+        let opt_prev = MaxBpTree.getFloor(self, compare, address);
 
         let next_address = address + size;
-        let opt_next_size = BTree.get(self.addresses, Nat.compare, next_address);
+        let opt_next_size = MaxBpTree.remove(self, compare, compare, next_address);
 
         var address_var = address;
         var size_var = size;
-        
-        switch (opt_prev, opt_next_size) {
-            case (?prev, ?next_size) {
 
-                if (can_merge_forward(prev.0, prev.1, address_var, size_var)){
-                    address_var := prev.0;
-                    size_var += prev.1;
-                };
-
-                if (can_merge_forward(address_var, size_var, next_address, next_size)){
-                    size_var += next_size;
-                    delete_sync(self, next_address);
-                };
-            };
-            case (?prev, _) {
-
-                if (can_merge_forward(prev.0, prev.1, address_var, size_var)){
+        switch (opt_prev) {
+            case (?prev) {
+                if (can_merge_forward(prev.0, prev.1, address_var, size_var)) {
                     address_var := prev.0;
                     size_var += prev.1;
                 };
             };
-            case (_, ?next_size) { 
-                if (can_merge_forward(address_var, size_var, next_address, next_size)){
-                    size_var += next_size;
-                    delete_sync(self, next_address);
-                };
-
-            };
-            case (_) { };
+            case (_) {};
         };
 
-        ignore replace_sync(self, address_var, size_var);
+        switch (opt_next_size) {
+            case (?next_size) size_var += next_size;
+            case (_) {};
+        };
+
+        ignore MaxBpTree.insert(self, compare, compare, address_var, size_var);
     };
 
-    public func get_pointer(self : FreeMemory, size_needed : Nat) : ?(address: Nat) {
-        let opt_set = BTreeUtils.getCeiling(self.sizes, Nat.compare, size_needed);
-        let ?(size, set) = opt_set else return null;
+    public func reallocate(self : FreeMemory, size_needed : Nat) : ?(address : Nat) {
+        if (size_needed == 0) return ?0x00; // the library does not store 0 sized blocks, so any address will do as it does not read from it
 
-        if (Set.size(set) == 0){
-            Debug.print("display: " # debug_show (display(self)) # "\n");
-        };
-        let ?address = Set.pop(set, nhash) else Debug.trap("MemoryRegion: found empty set in sizes map. [Report this bug to the developers if you see this message]");
-            
-        assert size >= size_needed;
+        let ?(address, size) = MaxBpTree.maxValue(self) else return null;
+        if (size < size_needed) return null;
 
-        // Debug.print("get_pointer: size_needed = " # debug_show (size_needed) # ", ptr = " # debug_show (address, size) # "\n");
         if (size == size_needed) {
-            delete_sync(self, address);
+            ignore MaxBpTree.remove(self, compare, compare, address);
             return ?address;
         };
 
-                let split_point = (size - size_needed) : Nat;
-                let trimmed_address = address + split_point;
+        let split_size = (size - size_needed) : Nat;
+        let trimmed_address = address + split_size;
 
-                // update the size of the retrieved pointer in free memory
-                ignore replace_sync(self, address, split_point);
+        // update the size of the retrieved pointer in free memory
+        ignore MaxBpTree.insert(self, compare, compare, address, split_size);
 
         return ?trimmed_address;
     };
 
-    public func display(self: FreeMemory): {
-        sizes: [(Nat, [Nat])];
-        addresses: [(Nat, Nat)]
-    }{
-        {
-            addresses = addresses(self);
-            sizes = sizes(self);
-        }
+    // Checks if the given address is properly freed, that is, if is fully contained within a free block
+    public func contains(self : FreeMemory, address : Nat, size : Nat) : Result<Bool, Text> {
+        let ?recieved = MaxBpTree.getFloor(self, compare, address) else return #ok(false);
+        let exists = recieved.0 <= address and (recieved.0 + recieved.1) >= (address + size);
+
+        if (exists) return #ok(true);
+        #err("improperly freed memory");
     };
 
-    public func toArray(self: FreeMemory): [(Nat, Nat)] {
-        addresses(self);
+    public func total_size(self : FreeMemory) : Nat {
+        var total_size = 0 : Nat;
+        for (size in MaxBpTree.vals(self)) {
+            total_size += size;
+        };
+        return total_size;
     };
 
-    public func addresses(self: FreeMemory): [(Nat, Nat)] {
-        let iter = BTree.entries(self.addresses);
-
-        Array.tabulate<(Nat, Nat)>(
-            BTree.size(self.addresses),
-            func(_ : Nat) : (Nat, Nat) {
-                let ?n = iter.next() else Prelude.unreachable();
-                n;
-            },
-        );
-    };
-
-    public func sizes(self: FreeMemory) : [(Nat, [Nat])] {
-        let iter = BTree.entries(self.sizes);
-
-        Array.tabulate<(Nat, [Nat])>(
-            BTree.size(self.sizes),
-            func(_ : Nat) : (Nat, [Nat]) {
-                let ?entry = iter.next() else Prelude.unreachable();
-                (entry.0, Set.toArray(entry.1));
-            },
-        );
+    public func toArray(self : FreeMemory) : [(Nat, Nat)] {
+        MaxBpTree.toArray(self);
     };
 };
