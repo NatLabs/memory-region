@@ -1,14 +1,14 @@
 [package]
 name = "memory-region"
-version = "0.1.1"
+version = "0.2.0"
 description = "An abstraction over the Region type that supports reusing deallocated memory."
 repository = "https://github.com/NatLabs/memory-region"
 keywords = [ "region", "memory", "bytes", "deallocate", "collections" ]
 
 [dependencies]
 base = "0.10.2"
-augmented-btrees = "../augmented-btrees"
-itertools = "0.1.2"
+augmented-btrees = "0.3.1"
+itertools = "0.2.1"
 
 [dev-dependencies]
 test = "1.2.0"
@@ -17,3 +17,4 @@ bench = "1.0.0"
 
 [toolchain]
 wasmtime = "14.0.4"
+moc = "0.10.2"

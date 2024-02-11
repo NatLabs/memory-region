@@ -75,16 +75,15 @@ Benchmarking the performance with 10k entries
 
 **Instructions**
 
-|              |  addBlob() | removeBlob() | removeBlob() merge blocks | addBlob() reallocation |
-| :----------- | ---------: | -----------: | ------------------------: | ---------------------: |
-| Region       |  7_690_443 |        ----- |                     ----- |                  ----- |
-| MemoryRegion | 12_540_675 |   90_775_947 |               239_162_910 |             84_871_033 |
-			
+|              |  addBlob() | removeBlob() | addBlob() reallocation | removeBlob() worst case |
+| :----------- | ---------: | -----------: | ---------------------: | ----------------------: |
+| Region       |  9_260_699 |        ----- |                  ----- |                   ----- |
+| MemoryRegion | 11_350_591 |  140_043_805 |             47_321_032 |             168_822_364 |
+	
 
 **Heap**
 
-|              | addBlob() | removeBlob() | removeBlob() merge blocks | addBlob() reallocation |
-| :----------- | --------: | -----------: | ------------------------: | ---------------------: |
-| Region       |     9_140 |        ----- |                     ----- |                  ----- |
-| MemoryRegion |     9_140 |    1_735_636 |                 4_217_956 |              2_326_636 |
-		
+|              | addBlob() | removeBlob() | addBlob() reallocation | removeBlob() worst case |
+| :----------- | --------: | -----------: | ---------------------: | ----------------------: |
+| Region       |     9_200 |        ----- |                  ----- |                   ----- |
+| MemoryRegion |     9_140 |    2_846_132 |              2_489_008 |               2_918_600 |
