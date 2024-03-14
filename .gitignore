@@ -13,6 +13,7 @@
 .mops/
 .wasm/
 .bench
+.src/Migrations.mo
 
 # frontend code
 node_modules/

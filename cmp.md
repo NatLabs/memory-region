@@ -31,7 +31,7 @@ Heap
 | Region       |     9_200 |        8_952 |                  8_952 |                     8_952 |
 | MemoryRegion |     9_140 |    3_508_532 |              3_009_008 |                 5_571_196 |
 
-**merge perf**
+**Merge performance**
 
 | Instructions | no merge (insert) |  merge prev |  merge next | merge prev and next |
 | :----------- | ----------------: | ----------: | ----------: | ------------------: |
@@ -55,7 +55,7 @@ Heap
 | Region       |     9_200 |        8_952 |                  8_952 |                   8_952 |
 | MemoryRegion |     9_140 |    4_722_336 |              3_129_008 |               5_033_280 |
 
-**merge perf**
+**Merge performance**
 
 Instructions
 
@@ -86,7 +86,7 @@ Heap
 | MemoryRegion |     9_140 |    2_846_132 |              2_489_008 |               2_918_600 |
 
 
- **merge perf**
+**Merge performance**
 
 
 Instructions
@@ -101,3 +101,69 @@ Heap
 |              | no merge (insert) | merge prev | merge next | merge prev and next |
 | :----------- | ----------------: | ---------: | ---------: | ------------------: |
 | MemoryRegion |         1_422_172 |  2_490_416 |  2_485_616 |           3_162_376 |
+
+
+#### Fixed issues with internal functions in Max B+ Tree
+
+Instructions
+
+|              |  addBlob() | removeBlob() | addBlob() reallocation | removeBlob() worst case |
+| :----------- | ---------: | -----------: | ---------------------: | ----------------------: |
+| Region       |  9_254_356 |        2_006 |                  2_641 |                   2_953 |
+| MemoryRegion | 11_344_248 |  123_146_538 |             47_648_854 |             150_202_099 |
+
+
+Heap
+
+|              | addBlob() | removeBlob() | addBlob() reallocation | removeBlob() worst case |
+| :----------- | --------: | -----------: | ---------------------: | ----------------------: |
+| Region       |     9_200 |        8_952 |                  8_952 |                   8_952 |
+| MemoryRegion |     9_140 |    2_319_428 |              2_717_352 |               2_446_108 |
+
+**Merge performance**
+
+Instructions
+
+|              | no merge (insert) |  merge prev |  merge next | merge prev and next |
+| :----------- | ----------------: | ----------: | ----------: | ------------------: |
+| MemoryRegion |       101_515_261 | 104_617_643 | 103_760_605 |         195_021_097 |
+
+
+Heap
+
+|              | no merge (insert) | merge prev | merge next | merge prev and next |
+| :----------- | ----------------: | ---------: | ---------: | ------------------: |
+| MemoryRegion |         1_102_572 |  1_650_156 |  1_645_236 |           2_522_336 |
+
+#### MaxBpTree Optimization
+
+Instructions
+
+|              |  addBlob() | removeBlob() | addBlob() reallocation | removeBlob() worst case |
+| :----------- | ---------: | -----------: | ---------------------: | ----------------------: |
+| Region       |  9_252_276 |        2_006 |                  2_641 |                   2_953 |
+| MemoryRegion | 11_032_168 |  120_815_031 |             39_514_276 |             143_740_342 |
+
+
+Heap
+
+|              | addBlob() | removeBlob() | addBlob() reallocation | removeBlob() worst case |
+| :----------- | --------: | -----------: | ---------------------: | ----------------------: |
+| Region       |     9_152 |        8_904 |                  8_904 |                   8_904 |
+| MemoryRegion |     9_092 |    2_138_392 |              1_672_544 |               2_278_840 |
+
+
+**Merge performance**
+
+Instructions
+
+|              | no merge (insert) |  merge prev |  merge next | merge prev and next |
+| :----------- | ----------------: | ----------: | ----------: | ------------------: |
+| MemoryRegion |       101_177_532 | 100_951_767 | 100_511_055 |         189_091_747 |
+
+
+Heap
+
+|              | no merge (insert) | merge prev | merge next | merge prev and next |
+| :----------- | ----------------: | ---------: | ---------: | ------------------: |
+| MemoryRegion |         1_433_164 |  1_337_168 |  1_337_168 |           2_072_392 |

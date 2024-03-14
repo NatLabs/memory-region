@@ -1,15 +1,11 @@
-.PHONY: test bench docs check
+.PHONY: test compile-tests docs no-warn
 
-test:
+test: 
 	mops test
 
 check:
 	find src -type f -name '*.mo' -print0 | \
 	xargs -0 $(shell mops toolchain bin moc) -r $(shell mops sources) -Werror -wasi-system-api
 
-docs:
-	$(MocvPath)/mo-doc
-	$(MocvPath)/mo-doc --format plain
-
-bench: set-dfx-moc-path
-	mops bench  --gc incremental%
+bench:
+	mops bench --gc incremental

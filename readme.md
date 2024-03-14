@@ -8,6 +8,7 @@ While Motoko's `Region` type effectively isolates sections of stable memory, it 
   - `addBlob` - allocates enough memory for the given blob, inserts the blob into the `Region` and returns the memory block's address.
   - `removeBlob` - Extracts the blob at the given address from the `Region` and frees up the associated memory block.
 
+
 ## How it works
 Internally, the `MemoryRegion` stores data in a `Region`, updating a size counter that keeps track of the total allocated memory, and two btree maps for managing the free memory blocks.
 The first map orderes the blocks by their addresses, while the second map orders them by their sizes. This strategy enables each `MemoryRegion` to allocate and deallocate memory blocks in `O(log n)` time.
@@ -30,11 +31,13 @@ The first map orderes the blocks by their addresses, while the second map orders
 ```motoko
   import { MemoryRegion } "mo:memory-region";
 ```
+
 #### Usage
+
 - Store and remove data from a `MemoryRegion`
 ```motoko
 
-  let memory_region = MemoryRegion.new();
+  stable var memory_region = MemoryRegion.new();
 
   let blob = Blob.fromArray([1, 2, 3, 4]);
   let blob_size = blob.size();
@@ -52,9 +55,8 @@ The first map orderes the blocks by their addresses, while the second map orders
 
 - Using `MemoryRegion` to manage memory internally within a custom data-structure
 ```motoko
-  import Region "mo:base/Region";
 
-  let memory_region = MemoryRegion.new();
+  stable var memory_region = MemoryRegion.new();
 
   let blob = Blob.fromArray([1, 2, 3, 4]);
   let blob_size = blob.size();
@@ -65,6 +67,17 @@ The first map orderes the blocks by their addresses, while the second map orders
 
   MemoryRegion.deallocate(memory_region, blob_ptr);
   
+```
+
+- Upgrading to a new version and migrating the data in stable memory
+  - Install the mops version you want to upgrade to `mops add memory-region@<version>`
+  - Include the `migrate()` function in your code or in the post_upgrade() system function
+> Note: Only upgrades are supported. Downgrades are not supported.
+
+```motoko
+
+  stable var memory_region = MemoryRegion.new();
+  memory_region := MemoryRegion.migrate(memory_region);
 ```
 
 ## Benchmarks

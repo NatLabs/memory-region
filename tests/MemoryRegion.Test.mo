@@ -31,6 +31,7 @@ suite(
 
         let fuzzer = Fuzz.fromSeed(0x323);
         let memory_region = MemoryRegion.new();
+
         let pointers = Buffer.Buffer<MemoryRegion.Pointer>(limit * 2);
         let blobs = Buffer.Buffer<Blob>(limit);
 
@@ -59,13 +60,13 @@ suite(
 
                 let size = prev_size;
 
-                assert MemoryRegion.memoryInfo(memory_region) == {
-                    size;
-                    allocated = size;
-                    deallocated = 0;
-                    pages = Utils.div_ceil(size, 64 * 1024);
-                    capacity = Utils.div_ceil(size, 64 * 1024) * 64 * 1024;
-                };
+                assert MemoryRegion.size(memory_region) == size;
+                assert MemoryRegion.allocated(memory_region) == size;
+                assert MemoryRegion.deallocated(memory_region) == 0;
+                assert MemoryRegion.pages(memory_region) == Utils.div_ceil(size, 64 * 1024);
+                assert MemoryRegion.capacity(memory_region) == Utils.div_ceil(size, 64 * 1024) * 64 * 1024;
+
+                
 
                 assert MemoryRegion.getFreeMemory(memory_region) == [];
                 assert pointers.size() == limit;
@@ -101,7 +102,7 @@ suite(
         test(
             "deallocate every 2nd memory block",
             func() {
-
+                
                 var skipped_address = limit + 1; // avoids starting at 0 because that is the first freed memory block
 
                 var i = 0;
@@ -251,21 +252,22 @@ suite(
 
                 let first_pointer = pointers.get(0);
 
-                for (i in order.vals()){
+                for (i in order.vals()) {
                     let (address, size) = pointers.get(i);
                     let expected_blob = blobs.get(i);
 
                     assert expected_blob.size() == size;
 
+                    assert MaxBpTree.get(memory_region.free_memory, Cmp.Nat, address) == null;
                     let floor = MaxBpTree.getFloor(memory_region.free_memory, Cmp.Nat, address);
                     let ceil = MaxBpTree.getCeiling(memory_region.free_memory, Cmp.Nat, address);
 
-                    let has_prev = switch(floor){
+                    let has_prev = switch(floor) {
                         case (?prev) prev.0 + prev.1 == address;
                         case (_) false;
                     };
 
-                    let has_next = switch(ceil){
+                    let has_next = switch(ceil) {
                         case (?next) address + size == next.0;
                         case (_) false;
                     };
@@ -275,6 +277,7 @@ suite(
 
                     let blob = MemoryRegion.removeBlob(memory_region, address, size);
                     assert MaxBpTreeMethods.validate_max_path(memory_region.free_memory, Cmp.Nat);
+                    assert MaxBpTreeMethods.validate_subtree_size(memory_region.free_memory);
                     
                     switch(has_prev, has_next){
                         case (false, false) {
@@ -328,6 +331,8 @@ suite(
 
                 Debug.print("free_memory_block:2 " # debug_show MemoryRegion.getFreeMemory(memory_region));
 
+                pointers.clear();
+                blobs.clear();
             },
         );
 
@@ -335,7 +340,6 @@ suite(
         test(
             "allocate:  reallocate memory blocks",
             func() {
-                assert pointers.size() == limit;
                 assert MemoryRegion.getFreeMemory(memory_region).size() == 1;
                 let free_memory_block = MemoryRegion.getFreeMemory(memory_region)[0];
 
@@ -344,11 +348,14 @@ suite(
 
                 var expected_address = initial_free_memory_size;
 
-                label _loop for (pointer in pointers.vals()) {
-                    let (_, size) = pointer;
+                label _loop for (i in Iter.range(0, limit - 1)) {
+                    let size = fuzzer.nat.randomRange(1, 100);
 
                     expected_address -= size;
+                    let new_blob = fuzzer.blob.randomBlob(size);
                     let new_address = MemoryRegion.allocate(memory_region, size);
+                    MemoryRegion.storeBlob(memory_region, new_address, new_blob);
+
                     assert MaxBpTreeMethods.validate_max_path(memory_region.free_memory, Cmp.Nat);
 
                     if (expected_address != new_address) {
@@ -356,8 +363,107 @@ suite(
                         assert false;
                     };
 
+                    pointers.add((new_address, size));
+                    blobs.add(new_blob);
+
                     assert memory_region.deallocated == new_address;
                 };
+            },
+        );
+
+        test(
+            "resize()",
+            func() {
+                let order = Buffer.Buffer<Nat>(limit);
+                for (i in Iter.range(0, limit - 1)) {
+                    order.add(i);
+                };
+                fuzzer.buffer.shuffle(order);
+
+                assert pointers.size() == limit;
+
+                assert memory_region.deallocated == deallocated_size(memory_region);
+                var total_deallocated = memory_region.deallocated;
+
+                for (i in order.vals()) {
+                    let (address, size) = pointers.get(i);
+                    let expected_blob = blobs.get(i);
+
+                    assert expected_blob.size() == size;
+
+                    assert MaxBpTree.get(memory_region.free_memory, Cmp.Nat, address) == null;
+                    let floor = MaxBpTree.getFloor(memory_region.free_memory, Cmp.Nat, address);
+                    let ceil = MaxBpTree.getCeiling(memory_region.free_memory, Cmp.Nat, address);
+
+                    let has_prev = switch(floor) {
+                        case (?prev) prev.0 + prev.1 == address;
+                        case (_) false;
+                    };
+
+                    let has_next = switch(ceil) {
+                        case (?next) address + size == next.0;
+                        case (_) false;
+                    };
+
+                    Debug.print("removing " # debug_show (address, size) );
+                    Debug.print("(has_prev, has_next) " # debug_show (has_prev, has_next));
+
+                    let blob = MemoryRegion.removeBlob(memory_region, address, size);
+                    assert MaxBpTreeMethods.validate_max_path(memory_region.free_memory, Cmp.Nat);
+                    assert MaxBpTreeMethods.validate_subtree_size(memory_region.free_memory);
+                    
+                    switch(has_prev, has_next){
+                        case (false, false) {
+                            let mem_block_size = MaxBpTree.get(memory_region.free_memory, Cmp.Nat, address);
+                            assert mem_block_size == ?size;
+                        };
+                        case (true, false) {
+                            let ?prev = floor else return assert false;
+                            Debug.print("prev " # debug_show prev);
+                            let mem_block_size = MaxBpTree.get(memory_region.free_memory, Cmp.Nat, prev.0);
+                            Debug.print("mem_block_size " # debug_show mem_block_size);
+
+                            assert mem_block_size == ?(prev.1 + size);
+                        };
+                        case (false, true) {
+                            let ?next = ceil else return  assert false;
+                            Debug.print("next " # debug_show next);
+                            let mem_block_size = MaxBpTree.get(memory_region.free_memory, Cmp.Nat, address);
+                            Debug.print("mem_block_size " # debug_show mem_block_size);
+                            Debug.print("next_block " # debug_show MaxBpTree.get(memory_region.free_memory, Cmp.Nat, next.0));
+
+                            assert mem_block_size == ?(size + next.1);
+                        };
+                        case (true, true) {
+                            let ?prev = floor else return  assert false;
+                            let ?next = ceil else return  assert false;
+                            Debug.print("prev " # debug_show prev);
+                            Debug.print("next " # debug_show next);
+                            let mem_block_size = MaxBpTree.get(memory_region.free_memory, Cmp.Nat, prev.0);
+                            Debug.print("mem_block_size " # debug_show mem_block_size);
+                            assert mem_block_size == ?(prev.1 + size + next.1);
+                        };
+                    };
+
+                    if (not (expected_blob == blob)) {
+                        Debug.trap("(expected, received) " # debug_show (expected_blob, blob) # " at index " # debug_show i);
+                    };
+
+                    total_deallocated += size;
+
+                    assert memory_region.deallocated == total_deallocated;
+
+                    let total_free_memory = deallocated_size(memory_region);
+                    if (not (memory_region.deallocated == total_free_memory)) {
+                        Debug.print("mismatch at index " # debug_show i);
+                        Debug.print(".deallocated != total_free_memory " # debug_show (memory_region.deallocated, total_free_memory));
+                        assert false;
+                    };
+
+                };
+
+                Debug.print("free_memory_block:2 " # debug_show MemoryRegion.getFreeMemory(memory_region));
+
             },
         );
     },
