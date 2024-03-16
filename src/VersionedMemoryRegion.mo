@@ -1,9 +1,6 @@
 import Region "mo:base/Region";
 import Result "mo:base/Result";
 
-import MaxBpTree "mo:augmented-btrees/MaxBpTree";
-
-import Utils "Utils";
 import FreeMemory "FreeMemory";
 import Migrations "Migrations";
 import MemoryRegion "MemoryRegion";

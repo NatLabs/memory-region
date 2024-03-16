@@ -1,7 +1,5 @@
 import Region "mo:base/Region";
 import Result "mo:base/Result";
-import Array "mo:base/Array";
-import Prelude "mo:base/Prelude";
 import Nat "mo:base/Nat";
 import Debug "mo:base/Debug";
 import Nat8 "mo:base/Nat8";
@@ -117,13 +115,13 @@ module MemoryRegion {
 
         let allocated = (self.size - deallocated) : Nat;
 
-        let info : MemoryInfo = {
+        return {
             pages;
             size;
             capacity;
             allocated;
             deallocated;
-        };
+        } : MemoryInfo;
     };
 
     public func deallocate(self : MemoryRegion, address : Nat, size : Nat) {
@@ -197,7 +195,7 @@ module MemoryRegion {
         let overflow = (bytes - unused) : Nat;
 
         let pages_to_allocate = Utils.div_ceil(overflow, PageSize);
-        let prev_pages = Region.grow(self.region, Nat64.fromNat(pages_to_allocate));
+        ignore Region.grow(self.region, Nat64.fromNat(pages_to_allocate));
         self.pages += pages_to_allocate;
     };
 
@@ -205,11 +203,14 @@ module MemoryRegion {
         FreeMemory.contains(self.free_memory, address, size);
     };
 
-    /// Resets the memory region to its initial state.
+    /// Marks all the memory blocks in the region as deallocated.
+    /// Note however that the data is not cleared and is only overwritten when it is reallocated.
+    /// The size will be the total number deallocated bytes and the allocated bytes will be reset to 0.
     public func clear(self : MemoryRegion) {
         MaxBpTree.clear(self.free_memory);
-        self.deallocated := 0;
-        self.size := 0;
+        self.deallocated := self.size;
+        MaxBpTree.clear(self.free_memory);
+        ignore MaxBpTree.insert(self.free_memory, Cmp.Nat, Cmp.Nat, 0, self.size);
     };
 
     public func storeBlob(self : MemoryRegion, address : Nat, blob : Blob) {

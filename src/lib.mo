@@ -1,5 +1,5 @@
 import MemoryRegionModule "MemoryRegion";
-import VersionedMemoryRegionModule "Versioned";
+import VersionedMemoryRegionModule "VersionedMemoryRegion";
 
 module {    
     public let MemoryRegion = MemoryRegionModule;

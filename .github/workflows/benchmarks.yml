@@ -32,10 +32,11 @@ jobs:
           path: |
             ~/.cache/mops
             ~/mops
-  
-      - uses: aviate-labs/setup-dfx@v0.2.3
-        with:
-          dfx-version: 0.15.1
+
+      - name: Install dfx
+        uses: dfinity/setup-dfx@main
+      - name: Confirm successful installation
+        run: dfx --version
 
       - name: Install dfx cache
         run: dfx cache install
@@ -44,17 +45,16 @@ jobs:
         run: |
           npm --yes -g i ic-mops
           mops i
-
           mops toolchain init
-          mops toolchain use moc 0.10.2
+          mops toolchain use moc 0.10.4
 
           # set moc path for dfx to use
           echo "DFX_MOC_PATH=$(mops toolchain bin moc)" >> $GITHUB_ENV
-     
+      
       - name: Benchmarks
         id: benchmarks
         run: |
-          mops bench 2>&1 | tee benchmark_results.txt
+          mops bench  --gc incremental 2>&1 | tee benchmark_results.txt
           
           # Process the output to remove everything up to the last occurrence of \033[2K
           awk '/\x1b\[2K/ { buffer = "" } { buffer = buffer $0 "\n" } END { print buffer }' benchmark_results.txt > intermediate_results.txt

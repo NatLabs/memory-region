@@ -1,7 +1,4 @@
-import Array "mo:base/Array";
 import Result "mo:base/Result";
-import Prelude "mo:base/Prelude";
-import Option "mo:base/Option";
 import Nat "mo:base/Nat";
 import Int "mo:base/Int";
 import Nat64 "mo:base/Nat64";
@@ -49,7 +46,8 @@ module FreeMemory {
         let prev_index = if (int_index >= 0) {
             Debug.print("address should not exist in the tree");
             Debug.print("intersection between (address, size): " # debug_show (address, size));
-            Debug.trap("Please report this bug to the library's maintainer on github");
+            Debug.print("This might be because you are trying to free a block or part of a block was already freed");
+            Debug.trap("If you are sure this is not the case, please report this bug to the library's maintainer on github");
         } else {
 
             if (expected_index == 0) {
@@ -108,7 +106,7 @@ module FreeMemory {
                 switch (size_needed) {
                     case (?size_needed) {
                         if (size_needed < size) {
-                            let reclaimed_size = size - size_needed;
+                            let reclaimed_size = size - size_needed : Nat;
                             MaxBpTree._insert_at_leaf_index(self, Cmp.Nat, Cmp.Nat, leaf_node, Int.abs(int_prev_index + 1), address, reclaimed_size, true);
                             
                             let resized_address = address + reclaimed_size;
@@ -128,7 +126,7 @@ module FreeMemory {
 
                 switch (size_needed) {
                     case (?size_needed) if (size_needed < merged_size) {
-                        let reclaimed_size = merged_size - size_needed;
+                        let reclaimed_size = merged_size - size_needed : Nat;
                         ignore MaxBpTree._replace_at_leaf_index(self, Cmp.Nat, Cmp.Nat, leaf_node, prev_index, prev_address, reclaimed_size, true);
 
                         let resized_address = prev_address + reclaimed_size;
@@ -148,7 +146,7 @@ module FreeMemory {
 
                 switch (size_needed) {
                     case (?size_needed) if (size_needed < merged_size) {
-                        let reclaimed_size = merged_size - size_needed;
+                        let reclaimed_size = merged_size - size_needed : Nat;
                         ignore MaxBpTree._replace_at_leaf_index(self, Cmp.Nat, Cmp.Nat, next_node, next_index, address, reclaimed_size, true);
                         if (next_index == 0) {
                             switch (next_node.1 [C.PARENT]) {
@@ -185,7 +183,7 @@ module FreeMemory {
 
                 switch (size_needed) {
                     case (?size_needed) if (size_needed < merged_size) {
-                        let reclaimed_size = merged_size - size_needed;
+                        let reclaimed_size = merged_size - size_needed : Nat;
                         ignore MaxBpTree._replace_at_leaf_index(self, Cmp.Nat, Cmp.Nat, leaf_node, prev_index, prev_address, reclaimed_size, true);
                         ignore MaxBpTree._remove_from_leaf(self, Cmp.Nat, Cmp.Nat, next_node, next_index, true);
                         let resized_address = prev_address + reclaimed_size;
@@ -218,10 +216,13 @@ module FreeMemory {
     public func reallocate(self : FreeMemory, size_needed : Nat) : ?(address : Nat) {
         if (size_needed == 0) return ?Nat64.toNat(Nat64.maximumValue); // the library does not store 0 sized blocks, so any address will do as it does not read from it
 
-        let (address, size) =  switch(MaxBpTree.maxValue(self)){
+        let max_block = switch(MaxBpTree.maxValue(self)){
             case (null) return null;
             case (?max) max;
         };
+
+        let address = max_block.0;
+        let size = max_block.1;
 
         if (size < size_needed) return null;
 

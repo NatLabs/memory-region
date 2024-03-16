@@ -17,6 +17,8 @@ test = "1.2.0"
 fuzz = "0.2.0"
 bench = "1.0.0"
 
+memory-region-v0_1_1 = "https://github.com/NatLabs/memory-region#main@682d5a477446c3955ad3fad1800cab1f85202ec5"
+
 [toolchain]
 wasmtime = "14.0.4"
 moc = "0.10.4"

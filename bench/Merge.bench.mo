@@ -1,21 +1,12 @@
 import Iter "mo:base/Iter";
-import Array "mo:base/Array";
 import Buffer "mo:base/Buffer";
-import Int "mo:base/Int";
-import Blob "mo:base/Blob";
-import Region "mo:base/Region";
-import Nat64 "mo:base/Nat64";
 import Debug "mo:base/Debug";
 import Nat "mo:base/Nat";
-import Nat8 "mo:base/Nat8";
-import Prelude "mo:base/Prelude";
 
 import Bench "mo:bench";
 import Fuzz "mo:fuzz";
-import Itertools "mo:itertools/Iter";
 
 import MemoryRegion  "../src/MemoryRegion";
-import Utils "../src/Utils";
 
 module {
     public func init() : Bench.Bench {
