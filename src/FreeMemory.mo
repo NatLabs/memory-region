@@ -49,7 +49,8 @@ module FreeMemory {
         let prev_index = if (int_index >= 0) {
             Debug.print("address should not exist in the tree");
             Debug.print("intersection between (address, size): " # debug_show (address, size));
-            Debug.trap("Please report this bug to the library's maintainer on github");
+            Debug.print("This might be because you are trying to free a block or part of a block was already freed");
+            Debug.trap("If you are sure this is not the case, please report this bug to the library's maintainer on github");
         } else {
 
             if (expected_index == 0) {
@@ -218,10 +219,13 @@ module FreeMemory {
     public func reallocate(self : FreeMemory, size_needed : Nat) : ?(address : Nat) {
         if (size_needed == 0) return ?Nat64.toNat(Nat64.maximumValue); // the library does not store 0 sized blocks, so any address will do as it does not read from it
 
-        let (address, size) =  switch(MaxBpTree.maxValue(self)){
+        let max_block = switch(MaxBpTree.maxValue(self)){
             case (null) return null;
             case (?max) max;
         };
+
+        let address = max_block.0;
+        let size = max_block.1;
 
         if (size < size_needed) return null;
 

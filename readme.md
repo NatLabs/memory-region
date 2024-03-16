@@ -10,8 +10,8 @@ While Motoko's `Region` type effectively isolates sections of stable memory, it 
 
 
 ## How it works
-Internally, the `MemoryRegion` stores data in a `Region`, updating a size counter that keeps track of the total allocated memory, and two btree maps for managing the free memory blocks.
-The first map orderes the blocks by their addresses, while the second map orders them by their sizes. This strategy enables each `MemoryRegion` to allocate and deallocate memory blocks in `O(log n)` time.
+Internally, the `MemoryRegion` stores data in a `Region`, updating a size counter that keeps track of the total allocated memory, and a specialized Max B+Tree for managing the free memory blocks.
+The tree orders the memory blocks by their addresses, and stores the keeps a reference to the block with the largest size in each of its nodes. This strategy enables the `MemoryRegion` to allocate and deallocate memory blocks in `O(log n)` time.
 
 ## Pros and Cons
 ### Pros
@@ -20,7 +20,7 @@ The first map orderes the blocks by their addresses, while the second map orders
 - Minimized risk of memory fragmentation.
 
 ### Cons
-- Memory blocks are duplicated between the two ordered maps in order to ensure log(n) time for allocation and deallocation
+- Deallocated memory is stored on the heap, which has a limited size and can cause memory leaks if not managed properly during upgrades.
 
 ### Getting Started
 #### Installation
@@ -28,9 +28,26 @@ The first map orderes the blocks by their addresses, while the second map orders
 - Run `mops add memory-region`
 
 #### Import Module
+
+This library provides two implementations of the MemoryRegion:
+- Regular Module 
 ```motoko
-  import { MemoryRegion } "mo:memory-region";
+  import MemoryRegion "mo:memory-region/MemoryRegion";
 ```
+- and a Versioned Module
+```motoko
+  import MemoryRegion "mo:memory-region/VersionedMemoryRegion";
+```
+
+The versioned implementation is introduced to make it easier to migrate between the current and future versions of the `MemoryRegion` library. It provides a `migrate()` function that can be used to upgrade once a newer version of the library is available.
+
+```motoko
+  import MemoryRegion "mo:memory-region/VersionedMemoryRegion";
+
+  stable var memory_region = MemoryRegion.new();
+  memory_region := MemoryRegion.migrate(memory_region);
+```
+For more information on migration, and how these two implementations differ, see the [migration guide](migration.md).
 
 #### Usage
 
@@ -69,17 +86,6 @@ The first map orderes the blocks by their addresses, while the second map orders
   
 ```
 
-- Upgrading to a new version and migrating the data in stable memory
-  - Install the mops version you want to upgrade to `mops add memory-region@<version>`
-  - Include the `migrate()` function in your code or in the post_upgrade() system function
-> Note: Only upgrades are supported. Downgrades are not supported.
-
-```motoko
-
-  stable var memory_region = MemoryRegion.new();
-  memory_region := MemoryRegion.migrate(memory_region);
-```
-
 ## Benchmarks
 Region vs MemoryRegion
 
@@ -88,15 +94,16 @@ Benchmarking the performance with 10k entries
 
 **Instructions**
 
-|              |  addBlob() | removeBlob() | addBlob() reallocation | removeBlob() worst case |
-| :----------- | ---------: | -----------: | ---------------------: | ----------------------: |
-| Region       |  9_260_699 |        ----- |                  ----- |                   ----- |
-| MemoryRegion | 11_350_591 |  140_043_805 |             47_321_032 |             168_822_364 |
-	
+|                       |  addBlob() | removeBlob() | addBlob() reallocation | removeBlob() worst case |
+| :-------------------- | ---------: | -----------: | ---------------------: | ----------------------: |
+| Region                |  9_258_916 |        2_011 |                  2_646 |                   2_958 |
+| MemoryRegion          | 11_038_808 |  120_867_124 |             39_782_232 |             141_676_905 |
+| VersionedMemoryRegion | 11_379_905 |  121_218_428 |             40_123_743 |             142_028_623 |
 
 **Heap**
 
-|              | addBlob() | removeBlob() | addBlob() reallocation | removeBlob() worst case |
-| :----------- | --------: | -----------: | ---------------------: | ----------------------: |
-| Region       |     9_200 |        ----- |                  ----- |                   ----- |
-| MemoryRegion |     9_140 |    2_846_132 |              2_489_008 |               2_918_600 |
+|                       | addBlob() | removeBlob() | addBlob() reallocation | removeBlob() worst case |
+| :-------------------- | --------: | -----------: | ---------------------: | ----------------------: |
+| Region                |     9_152 |        8_904 |                  8_904 |                   8_904 |
+| MemoryRegion          |     9_092 |    2_140_716 |              1_688_384 |               2_260_224 |
+| VersionedMemoryRegion |     9_092 |    2_140_716 |              1_688_384 |               2_260_224 |

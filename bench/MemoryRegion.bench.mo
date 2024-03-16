@@ -1,20 +1,18 @@
 import Iter "mo:base/Iter";
 import Array "mo:base/Array";
 import Buffer "mo:base/Buffer";
-import Int "mo:base/Int";
 import Blob "mo:base/Blob";
 import Region "mo:base/Region";
 import Nat64 "mo:base/Nat64";
 import Debug "mo:base/Debug";
 import Nat "mo:base/Nat";
 import Nat8 "mo:base/Nat8";
-import Prelude "mo:base/Prelude";
 
 import Bench "mo:bench";
 import Fuzz "mo:fuzz";
-import Itertools "mo:itertools/Iter";
 
 import MemoryRegion  "../src/MemoryRegion";
+// import VersionedMemoryRegion  "../src/VersionedMemoryRegion";
 import Utils "../src/Utils";
 
 module {
@@ -25,57 +23,52 @@ module {
         bench.name("Region vs MemoryRegion");
         bench.description("Benchmarking the performance with 10k entries");
 
-        bench.rows(["Region", "MemoryRegion"]);
-        bench.cols(["addBlob()", "removeBlob()", "addBlob() reallocation", "removeBlob() worst case"]);
+        bench.cols(["Region", "MemoryRegion"]);
+        bench.rows(["addBlob()", "removeBlob()", "addBlob() reallocation", "Preliminary Step: Sort Addresses", "removeBlob() worst case"]);
 
         let region : Region = Region.new();
         let memory_region = MemoryRegion.new();
+        // let vs_memory_region = VersionedMemoryRegion.new();
 
         let limit = 10_000;
-        let ptrs1 = Buffer.Buffer<(Nat, Nat, Blob)>(limit);
-        let ptrs2 = Buffer.Buffer<(Nat, Nat, Blob)>(limit);
+
+        let addresses = Buffer.Buffer<Nat>(limit * 2);
+        let blobs = Buffer.Buffer<Blob>(limit * 2);
+
         let order = Buffer.Buffer<Nat>(limit);
 
-        var adr1 = 0;
-        var adr2 = 0;
+        for (i in Iter.range(0, (limit * 2) - 1)) {
 
-        for (i in Iter.range(0, limit - 1)){
-            let size1 = fuzz.nat.randomRange(1, 100);
-            let size2 = fuzz.nat.randomRange(1, 100);
-
-            let blob1 = Blob.fromArray(
+            let size = fuzz.nat.randomRange(1, 100);
+       
+            let blob : Blob = Blob.fromArray(
                 Array.tabulate<Nat8>(
-                    size1,
+                    size,
                     func(i: Nat): Nat8 = Nat8.fromNat(i % 256)
                 )
             );
 
-            let blob2 = Blob.fromArray(
-                Array.tabulate<Nat8>(
-                    size2, 
-                    func(i: Nat): Nat8 = Nat8.fromNat(i % 256)
-                )
-            );
-
-            let ptr1 = (adr1, size1, blob1);
-            let ptr2 = (adr2, size2, blob2);
-
-            ptrs1.add(ptr1);
-            ptrs2.add(ptr2);
             order.add(i);
-
-            adr1 += size1;
-            adr2 += size2;
+            blobs.add(blob);
+            
+            if (i < limit){
+                let address = MemoryRegion.addBlob(memory_region, blob);
+                addresses.add(address);
+            };
         };
 
         fuzz.buffer.shuffle(order);
 
         bench.runner(
-            func(row, col) = switch (row, col) {
+            func(row, col) = switch (col, row) {
 
                 case ("Region", "addBlob()") {
+                    var address = 0;
 
-                    for ((address, size, blob) in Itertools.take(ptrs1.vals(), limit)){
+                    for (i in Iter.range(0, limit - 1)){
+                        let blob = blobs.get(i);
+                        let size = blob.size();
+
                         let capacity = (Nat64.toNat(Region.size(region)) * (2 ** 16));
 
                         if (capacity < (address + size)) {
@@ -85,50 +78,75 @@ module {
                         };
 
                         Region.storeBlob(region, Nat64.fromNat(address), blob);
+                        address += size;
                     }
                 };
 
-                case ("Region", "removeBlob()" or "addBlob() reallocation" or "removeBlob() worst case"){ };
+                case ("Region", "removeBlob()" or "addBlob() reallocation" or "removeBlob() worst case" or "Preliminary Step: Sort Addresses"){ };
 
                 case ("MemoryRegion", "addBlob()") {
-                    for ((address, _, blob) in ptrs1.vals()) {
-                        ignore MemoryRegion.addBlob(memory_region, blob);
+                    for (i in Iter.range(limit, (limit * 2) - 1)) {
+                        let address = MemoryRegion.addBlob(memory_region, blobs.get(i));
+                        addresses.add(address);
                     };
                 };
 
-                case ("MemoryRegion", "removeBlob()"){
-                    for (i in order.vals()) {
-                        let (address, size, _) = ptrs1.get(i);
+                case ("MemoryRegion", "removeBlob()"){ 
+                    // remove in random order to avoid the best case scenario of merging all memory blocks into one
+                    for (j in Iter.range(0, limit - 1)){
+                        let i = order.get(order.size() - j - 1);
+                        let address = addresses.get(i);
+                        let size = blobs.get(i).size();
                         ignore MemoryRegion.removeBlob(memory_region, address, size);
                     };
                 };
 
                 case ("MemoryRegion", "addBlob() reallocation") {
                     for (i in Iter.range(0, limit - 1)) {
-                        let (address, size, blob) = ptrs2.get(i);
+                        let blob = blobs.get(i);
 
-                        let new_address = MemoryRegion.addBlob(memory_region, blob);
-                        ptrs2.put(i, (new_address, size, blob));
+                        let j = order.get((order.size() / 2) + i );
+
+                        let address =  MemoryRegion.addBlob(memory_region, blob);
+                        blobs.put(j, blob);
+                        addresses.put(j, address);
+                    };
+                };
+
+                case ("MemoryRegion", "Preliminary Step: Sort Addresses") {
+                    let blocks = Buffer.Buffer<(Nat, Blob)>(addresses.size());
+
+                    for (i in Iter.range(0, addresses.size() - 1)) {
+                        blocks.add((addresses.get(i), blobs.get(i)));
+                    };
+
+                    blocks.sort(func(a, b) = Nat.compare(a.0, b.0));
+
+                    for (i in Iter.range(0, blocks.size() - 1)){
+                        let (address, blob) = blocks.get(i);
+                        addresses.put(i, address);
+                        blobs.put(i, blob);
                     };
                 };
 
                 case ("MemoryRegion", "removeBlob() worst case"){
                     for (i in Iter.range(0, (limit / 2) - 1)) {
                         let every_2nd_index = i * 2;
-                        let (address, size, _) = ptrs2.get(every_2nd_index);
+                        let address = addresses.get(every_2nd_index);
+                        let blob = blobs.get(every_2nd_index);
 
-                        ignore MemoryRegion.removeBlob(memory_region, address, size);
+                        ignore MemoryRegion.removeBlob(memory_region, address, blob.size());
                     };
 
                     for (i in Iter.range(0, (limit / 2) - 1)) {
                         let every_2nd_index_offset_1 = (i * 2) + 1;
                        
-                        let (address, size, _) = ptrs2.get(every_2nd_index_offset_1);
+                        let address = addresses.get(every_2nd_index_offset_1);
+                        let blob = blobs.get(every_2nd_index_offset_1);
 
-                        ignore MemoryRegion.removeBlob(memory_region, address, size);
+                        ignore MemoryRegion.removeBlob(memory_region, address, blob.size());
                     };
                 };
-
                 case (_) {
                     Debug.trap("Should not reach with row = " # debug_show row # " and col = " # debug_show col);
                 };

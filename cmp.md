@@ -135,23 +135,23 @@ Heap
 | :----------- | ----------------: | ---------: | ---------: | ------------------: |
 | MemoryRegion |         1_102_572 |  1_650_156 |  1_645_236 |           2_522_336 |
 
-#### MaxBpTree Optimization
+#### MaxBpTree Optimization + VersionedMemoryRegion
 
 Instructions
 
-|              |  addBlob() | removeBlob() | addBlob() reallocation | removeBlob() worst case |
-| :----------- | ---------: | -----------: | ---------------------: | ----------------------: |
-| Region       |  9_252_276 |        2_006 |                  2_641 |                   2_953 |
-| MemoryRegion | 11_032_168 |  120_815_031 |             39_514_276 |             143_740_342 |
-
+|                       |  addBlob() | removeBlob() | addBlob() reallocation | removeBlob() worst case |
+| :-------------------- | ---------: | -----------: | ---------------------: | ----------------------: |
+| Region                |  9_258_916 |        2_011 |                  2_646 |                   2_958 |
+| MemoryRegion          | 11_038_808 |  120_867_124 |             39_782_232 |             141_676_905 |
+| VersionedMemoryRegion | 11_379_905 |  121_218_428 |             40_123_743 |             142_028_623 |
 
 Heap
 
-|              | addBlob() | removeBlob() | addBlob() reallocation | removeBlob() worst case |
-| :----------- | --------: | -----------: | ---------------------: | ----------------------: |
-| Region       |     9_152 |        8_904 |                  8_904 |                   8_904 |
-| MemoryRegion |     9_092 |    2_138_392 |              1_672_544 |               2_278_840 |
-
+|                       | addBlob() | removeBlob() | addBlob() reallocation | removeBlob() worst case |
+| :-------------------- | --------: | -----------: | ---------------------: | ----------------------: |
+| Region                |     9_152 |        8_904 |                  8_904 |                   8_904 |
+| MemoryRegion          |     9_092 |    2_140_716 |              1_688_384 |               2_260_224 |
+| VersionedMemoryRegion |     9_092 |    2_140_716 |              1_688_384 |               2_260_224 |
 
 **Merge performance**
 

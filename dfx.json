@@ -1,8 +1,8 @@
 {
     "version": 1,
     "canisters": {
-        "actor_test" : {
-            "main" :"tests/MemoryRegion.ActorTest.mo",
+        "migrate_test" : {
+            "main" :"example/migrate_test2.mo",
             "type" :"motoko"
         }
     },
@@ -14,7 +14,7 @@
     },
     "networks": {
         "local": {
-            "bind": "127.0.0.1:8000",
+            "bind": "127.0.0.1:8009",
             "type": "ephemeral"
         }
     }
