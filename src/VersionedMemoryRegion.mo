@@ -23,15 +23,15 @@ module VersionedMemoryRegion {
         #v1(MemoryRegion.new());
     };
 
-    public func migrate(versions: VersionedMemoryRegion) : VersionedMemoryRegion {
-        Migrations.migrate(versions);
+    /// Migrate a memory region to the latest version.
+    public func upgrade(versions: VersionedMemoryRegion) : VersionedMemoryRegion {
+        Migrations.upgrade(versions);
     };
 
     public func getFreeMemory(versions : VersionedMemoryRegion) : [(Nat, Nat)] {
         let state = Migrations.getCurrentVersion(versions);
         FreeMemory.toArray(state.free_memory);
     };
-
 
     /// Total number of bytes allocated including deallocated bytes.
     public func size(versions : VersionedMemoryRegion) : Nat {

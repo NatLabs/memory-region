@@ -1,7 +1,4 @@
-import Array "mo:base/Array";
 import Result "mo:base/Result";
-import Prelude "mo:base/Prelude";
-import Option "mo:base/Option";
 import Nat "mo:base/Nat";
 import Int "mo:base/Int";
 import Nat64 "mo:base/Nat64";
@@ -109,7 +106,7 @@ module FreeMemory {
                 switch (size_needed) {
                     case (?size_needed) {
                         if (size_needed < size) {
-                            let reclaimed_size = size - size_needed;
+                            let reclaimed_size = size - size_needed : Nat;
                             MaxBpTree._insert_at_leaf_index(self, Cmp.Nat, Cmp.Nat, leaf_node, Int.abs(int_prev_index + 1), address, reclaimed_size, true);
                             
                             let resized_address = address + reclaimed_size;
@@ -129,7 +126,7 @@ module FreeMemory {
 
                 switch (size_needed) {
                     case (?size_needed) if (size_needed < merged_size) {
-                        let reclaimed_size = merged_size - size_needed;
+                        let reclaimed_size = merged_size - size_needed : Nat;
                         ignore MaxBpTree._replace_at_leaf_index(self, Cmp.Nat, Cmp.Nat, leaf_node, prev_index, prev_address, reclaimed_size, true);
 
                         let resized_address = prev_address + reclaimed_size;
@@ -149,7 +146,7 @@ module FreeMemory {
 
                 switch (size_needed) {
                     case (?size_needed) if (size_needed < merged_size) {
-                        let reclaimed_size = merged_size - size_needed;
+                        let reclaimed_size = merged_size - size_needed : Nat;
                         ignore MaxBpTree._replace_at_leaf_index(self, Cmp.Nat, Cmp.Nat, next_node, next_index, address, reclaimed_size, true);
                         if (next_index == 0) {
                             switch (next_node.1 [C.PARENT]) {
@@ -186,7 +183,7 @@ module FreeMemory {
 
                 switch (size_needed) {
                     case (?size_needed) if (size_needed < merged_size) {
-                        let reclaimed_size = merged_size - size_needed;
+                        let reclaimed_size = merged_size - size_needed : Nat;
                         ignore MaxBpTree._replace_at_leaf_index(self, Cmp.Nat, Cmp.Nat, leaf_node, prev_index, prev_address, reclaimed_size, true);
                         ignore MaxBpTree._remove_from_leaf(self, Cmp.Nat, Cmp.Nat, next_node, next_index, true);
                         let resized_address = prev_address + reclaimed_size;

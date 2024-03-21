@@ -16,8 +16,8 @@ module {
         bench.name("MemoryRegion merge perf");
         bench.description("Benchmarking the performance with 10k entries");
 
-        bench.rows(["MemoryRegion"]);
-        bench.cols(["no merge (insert)", "merge prev", "merge next", "merge prev and next"]);
+        bench.cols(["MemoryRegion"]);
+        bench.rows(["no merge (insert)", "merge prev", "merge next", "merge prev and next"]);
 
         let memory_region = MemoryRegion.new();
 
@@ -33,7 +33,7 @@ module {
         };
 
         bench.runner(
-            func(row, col) = switch (row, col) {
+            func(row, col) = switch (col, row) {
 
                 case ("MemoryRegion", "no merge (insert)") {
                     for (i in Iter.range(0, limit - 1)){

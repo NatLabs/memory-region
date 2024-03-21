@@ -12,14 +12,16 @@ module {
     type Set<A> = Set.Set<A>;
 
     public type VersionedMemoryRegion = {
+        // #empty;
         #v0 : MemoryRegionV0;
         #v1 : MemoryRegionV1;
     };
 
     public type CurrentMemoryRegion = MemoryRegionV1;
     
-    public func migrate(versions: VersionedMemoryRegion) : VersionedMemoryRegion {
+    public func upgrade(versions: VersionedMemoryRegion) : VersionedMemoryRegion {
         switch(versions){
+            // case (#empty) Debug.trap("Memory region is #empty. Needs to be initialized.");
             case (#v0(v0)){
                 let free_memory_list : [(Nat, Nat)] = BTree.toArray(v0.free_memory.addresses);
 
@@ -34,7 +36,7 @@ module {
                 #v1(v1)
             };
 
-            case (#v1(_)) versions
+            case (#v1(_)) versions;
         };
     };
 
