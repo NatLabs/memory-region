@@ -20,6 +20,7 @@ The tree orders the memory blocks by their addresses, and stores the keeps a ref
 - Minimized risk of memory fragmentation.
 
 ### Cons
+- Memory blocks are duplicated internally to ensure log(n) time for allocation and deallocation
 - Deallocated memory is stored on the heap, which has a limited size and can cause memory leaks if not managed properly during upgrades.
 
 ### Getting Started
@@ -48,6 +49,16 @@ The versioned implementation is introduced to make it easier to migrate between 
   memory_region := MemoryRegion.upgrade(memory_region);
 ```
 For more information on upgrades, and how these two implementations differ, see the [migration guide](migration.md).
+
+The versioned implementation is introduced to make it easier to migrate between the current and future versions of the `MemoryRegion` library. It provides a `migrate()` function that can be used to upgrade once a newer version of the library is available.
+
+```motoko
+  import MemoryRegion "mo:memory-region/VersionedMemoryRegion";
+
+  stable var memory_region = MemoryRegion.new();
+  memory_region := MemoryRegion.migrate(memory_region);
+```
+For more information on migration, and how these two implementations differ, see the [migration guide](migration.md).
 
 #### Usage
 
@@ -85,6 +96,7 @@ For more information on upgrades, and how these two implementations differ, see 
   MemoryRegion.deallocate(memory_region, address, blob_size);
   
 ```
+
 > Note that you are responsible for managing the memory blocks (address & size) allocated by the `MemoryRegion`. 
 > Any function called with incorrect blocks will trap and the call will fail.
 
@@ -96,7 +108,7 @@ Benchmarking the performance with 10k entries for the versions deployed to mops.
 
 **Instructions**
 
-|                         | `v0` -> `v0.1.1` |  `v0.2.0` |
+|                         | `v0` -> `v0.1.1` |  `v1.0.0` |
 | :---------------------- | ------------: | ----------: |
 | allocate()              |    12_771_326 |  10_844_189 |
 | deallocate()            |   344_454_528 | 110_464_205 |
@@ -105,7 +117,7 @@ Benchmarking the performance with 10k entries for the versions deployed to mops.
 
 **Heap**
 
-|                         | `v0` -> `v0.1.1` | `v0.2.0` |
+|                         | `v0` -> `v0.1.1` | `v1.0.0` |
 | :---------------------- | ------------: | ---------: |
 | allocate()              |        33_056 |     33_308 |
 | deallocate()            |     5_229_612 |  1_364_940 |

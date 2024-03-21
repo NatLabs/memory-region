@@ -1,9 +1,7 @@
 // @testmode wasi
-import Array "mo:base/Array";
 import Buffer "mo:base/Buffer";
 import Debug "mo:base/Debug";
 import Iter "mo:base/Iter";
-import Region "mo:base/Region";
 import Nat "mo:base/Nat";
 
 import { test; suite } "mo:test";
@@ -46,7 +44,6 @@ suite(
             func() {
 
                 var prev_size = 0;
-                var adr = 0;
 
                 for (i in Iter.range(0, limit - 1)) {
                     let bytes = fuzzer.nat.randomRange(1, 100);
@@ -65,8 +62,6 @@ suite(
                 assert MemoryRegion.deallocated(memory_region) == 0;
                 assert MemoryRegion.pages(memory_region) == Utils.div_ceil(size, 64 * 1024);
                 assert MemoryRegion.capacity(memory_region) == Utils.div_ceil(size, 64 * 1024) * 64 * 1024;
-
-                
 
                 assert MemoryRegion.getFreeMemory(memory_region) == [];
                 assert pointers.size() == limit;
@@ -250,8 +245,6 @@ suite(
                 assert memory_region.deallocated == deallocated_size(memory_region);
                 var total_deallocated = memory_region.deallocated;
 
-                let first_pointer = pointers.get(0);
-
                 for (i in order.vals()) {
                     let (address, size) = pointers.get(i);
                     let expected_blob = blobs.get(i);
@@ -343,7 +336,6 @@ suite(
                 assert MemoryRegion.getFreeMemory(memory_region).size() == 1;
                 let free_memory_block = MemoryRegion.getFreeMemory(memory_region)[0];
 
-                var allocated_size = 0;
                 let initial_free_memory_size = free_memory_block.1;
 
                 var expected_address = initial_free_memory_size;

@@ -1,5 +1,5 @@
 ## Migrating the Memory Region
-The `MemoryRegion` library has two implementations: a regular version and a versioned one. This guide will help you understand the migration process when upgrading to later versions of the library.
+The `MemoryRegion` library provides two implementations: a regular version and a versioned one. This guide will help you understand the migration process when upgrading to later versions of the library.
 
 #### Key Considerations
 - Migration primarily supports upgrades (not downgrades).
