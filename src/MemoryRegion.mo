@@ -28,6 +28,9 @@ module MemoryRegion {
     public type MemoryRegion = Migrations.CurrentMemoryRegion;
     public type VersionedMemoryRegion = Migrations.VersionedMemoryRegion;
 
+    public type MemoryRegionV0 = Migrations.MemoryRegionV0;
+    public type MemoryRegionV1 = Migrations.MemoryRegionV1;
+
     public type MemoryInfo = {
         /// Number of pages allocated. (1 page = 64KB)
         pages : Nat;
@@ -60,14 +63,14 @@ module MemoryRegion {
     };
 
     /// Create MemoryRegion from shared internal data
-    public func fromVersion(prev_version: VersionedMemoryRegion): MemoryRegion {
-        let migrated = Migrations.migrate(prev_version);
+    public func fromVersioned(prev_version: VersionedMemoryRegion): MemoryRegion {
+        let migrated = Migrations.upgrade(prev_version);
         Migrations.getCurrentVersion(migrated);
     };
 
     /// Return the simplest state of the MemoryRegion's data so that it only contains 
     /// primitives and can be recreated by any other version
-    public func shareVersion(self: MemoryRegion) : VersionedMemoryRegion  {
+    public func toVersioned(self: MemoryRegion) : VersionedMemoryRegion  {
         #v1(self);
     };
 
@@ -143,7 +146,6 @@ module MemoryRegion {
             };
             case (null) {};
         };
-                
 
         growIfNeeded(self, bytes);
 
@@ -151,7 +153,6 @@ module MemoryRegion {
         self.size += bytes;
         
         return address;
-
     };
 
     /// Tries to resize a memory block. 

@@ -1,8 +1,12 @@
 {
     "version": 1,
     "canisters": {
-        "migrate_test" : {
-            "main" :"example/migrate_test2.mo",
+        "regular_test" : {
+            "main" :"example/regular-migration/upgrade.mo",
+            "type" :"motoko"
+        },
+        "versioned_test" : {
+            "main" :"example/versioned-migration/initial.mo",
             "type" :"motoko"
         }
     },

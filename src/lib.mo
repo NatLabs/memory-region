@@ -4,5 +4,4 @@ import VersionedMemoryRegionModule "VersionedMemoryRegion";
 module {    
     public let MemoryRegion = MemoryRegionModule;
     public let VersionedMemoryRegion = VersionedMemoryRegionModule;
-    
 };
