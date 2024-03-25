@@ -26,7 +26,9 @@ module FreeMemory {
     };
 
     // Reclaims the memory block at the given address and merges it to adjacent free memory blocks if possible.
-    // If the size_needed is included then it returns the memory block address with the needed size and reclaims the rest.
+    // 
+    // If the memory block is resized, when size_needed is included, it returns the address for the resized block.
+    // If the size_needed greater than the size of the block, it returns null. 
     public func reclaim(self : FreeMemory, address : Nat, size : Nat, size_needed : ?Nat) : ?Nat {
         if (size == 0) return null;
 
@@ -39,16 +41,17 @@ module FreeMemory {
         var leaf_node = MaxBpTreeMethods.get_leaf_node(self, Cmp.Nat, address);
         let int_index = ArrayMut.binary_search(leaf_node.3, MaxBpTreeUtils.adapt_cmp(Cmp.Nat), address, leaf_node.0 [C.COUNT]);
 
-        let expected_index = Int.abs(int_index) - 1 : Nat; // the pos of the floor
-
-        var int_prev_index : Int = 0;
-
-        let prev_index = if (int_index >= 0) {
+        if (int_index >= 0) {
             Debug.print("address should not exist in the tree");
             Debug.print("intersection between (address, size): " # debug_show (address, size));
             Debug.print("This might be because you are trying to free a block or part of a block was already freed");
             Debug.trap("If you are sure this is not the case, please report this bug to the library's maintainer on github");
-        } else {
+        };
+
+        let expected_index = Int.abs(int_index) - 1 : Nat; // the pos of the floor
+        var int_prev_index : Int = 0;
+        
+        let prev_index = do {
 
             if (expected_index == 0) {
                 switch (leaf_node.2 [C.PREV]) {
@@ -107,7 +110,7 @@ module FreeMemory {
                     case (?size_needed) {
                         if (size_needed < size) {
                             let reclaimed_size = size - size_needed : Nat;
-                            MaxBpTree._insert_at_leaf_index(self, Cmp.Nat, Cmp.Nat, leaf_node, Int.abs(int_prev_index + 1), address, reclaimed_size, true);
+                            MaxBpTree._insert_at_leaf_index(self, Cmp.Nat, Cmp.Nat, leaf_node, Int.abs(int_prev_index + 1), address, reclaimed_size);
                             
                             let resized_address = address + reclaimed_size;
                             return ?resized_address;
@@ -117,7 +120,7 @@ module FreeMemory {
                 };
 
                 // if size_needed is null or greater than size, insert and return null
-                MaxBpTree._insert_at_leaf_index(self, Cmp.Nat, Cmp.Nat, leaf_node, Int.abs(int_prev_index + 1), address, size, true);
+                MaxBpTree._insert_at_leaf_index(self, Cmp.Nat, Cmp.Nat, leaf_node, Int.abs(int_prev_index + 1), address, size);
             };
             case (true, false) {
                 let ?(prev_address, prev_size) = leaf_node.3 [prev_index] else Debug.trap("prev_index should exist");
@@ -127,18 +130,18 @@ module FreeMemory {
                 switch (size_needed) {
                     case (?size_needed) if (size_needed < merged_size) {
                         let reclaimed_size = merged_size - size_needed : Nat;
-                        ignore MaxBpTree._replace_at_leaf_index(self, Cmp.Nat, Cmp.Nat, leaf_node, prev_index, prev_address, reclaimed_size, true);
+                        ignore MaxBpTree._replace_at_leaf_index(self, Cmp.Nat, Cmp.Nat, leaf_node, prev_index, prev_address, reclaimed_size);
 
                         let resized_address = prev_address + reclaimed_size;
                         return ?resized_address;
                     } else if (size_needed == merged_size) {
-                        ignore MaxBpTree._remove_from_leaf(self, Cmp.Nat, Cmp.Nat, leaf_node, prev_index, true);
+                        ignore MaxBpTree._remove_from_leaf(self, Cmp.Nat, Cmp.Nat, leaf_node, prev_index);
                         return ?prev_address;
                     };
                     case (null) {};
                 };
 
-                ignore MaxBpTree._replace_at_leaf_index(self, Cmp.Nat, Cmp.Nat, leaf_node, prev_index, prev_address, merged_size, true);
+                ignore MaxBpTree._replace_at_leaf_index(self, Cmp.Nat, Cmp.Nat, leaf_node, prev_index, prev_address, merged_size);
             };
             case (false, true) {
                 let ?(next_address, next_size) = next_node.3 [next_index] else Debug.trap("next_index should exist");
@@ -147,7 +150,7 @@ module FreeMemory {
                 switch (size_needed) {
                     case (?size_needed) if (size_needed < merged_size) {
                         let reclaimed_size = merged_size - size_needed : Nat;
-                        ignore MaxBpTree._replace_at_leaf_index(self, Cmp.Nat, Cmp.Nat, next_node, next_index, address, reclaimed_size, true);
+                        ignore MaxBpTree._replace_at_leaf_index(self, Cmp.Nat, Cmp.Nat, next_node, next_index, address, reclaimed_size);
                         if (next_index == 0) {
                             switch (next_node.1 [C.PARENT]) {
                                 case (?parent) {
@@ -157,15 +160,20 @@ module FreeMemory {
                             };
                         };
                         let resized_address = address + reclaimed_size;
+
+                        assert ?reclaimed_size == MaxBpTree.get(self, Cmp.Nat, address);
+
                         return ?resized_address;
                     } else if (size_needed == merged_size) {
-                        ignore MaxBpTree._remove_from_leaf(self, Cmp.Nat, Cmp.Nat, next_node, next_index, true);
+                        // Debug.print("merged_size: " # debug_show merged_size);
+                        // Debug.print("should remove next " # debug_show (next_address, next_size));
+                        ignore MaxBpTree._remove_from_leaf(self, Cmp.Nat, Cmp.Nat, next_node, next_index);
                         return ?address;
                     };
                     case (null) {};
                 };
 
-                ignore MaxBpTree._replace_at_leaf_index(self, Cmp.Nat, Cmp.Nat, next_node, next_index, address, merged_size, true);
+                ignore MaxBpTree._replace_at_leaf_index(self, Cmp.Nat, Cmp.Nat, next_node, next_index, address, merged_size);
 
                 if (next_index == 0) {
                     switch (next_node.1 [C.PARENT]) {
@@ -184,24 +192,24 @@ module FreeMemory {
                 switch (size_needed) {
                     case (?size_needed) if (size_needed < merged_size) {
                         let reclaimed_size = merged_size - size_needed : Nat;
-                        ignore MaxBpTree._replace_at_leaf_index(self, Cmp.Nat, Cmp.Nat, leaf_node, prev_index, prev_address, reclaimed_size, true);
-                        ignore MaxBpTree._remove_from_leaf(self, Cmp.Nat, Cmp.Nat, next_node, next_index, true);
+                        ignore MaxBpTree._replace_at_leaf_index(self, Cmp.Nat, Cmp.Nat, leaf_node, prev_index, prev_address, reclaimed_size);
+                        ignore MaxBpTree._remove_from_leaf(self, Cmp.Nat, Cmp.Nat, next_node, next_index);
                         let resized_address = prev_address + reclaimed_size;
                         return ?resized_address;
                     } else if (size_needed == merged_size) {
-                        ignore MaxBpTree._remove_from_leaf(self, Cmp.Nat, Cmp.Nat, next_node, next_index, true);
-                        ignore MaxBpTree._remove_from_leaf(self, Cmp.Nat, Cmp.Nat, leaf_node, prev_index, true);
+                        ignore MaxBpTree._remove_from_leaf(self, Cmp.Nat, Cmp.Nat, next_node, next_index);
+                        ignore MaxBpTree._remove_from_leaf(self, Cmp.Nat, Cmp.Nat, leaf_node, prev_index);
                         return ?prev_address;
                     };
                     case (null) {};
                 };
 
-                ignore MaxBpTree._replace_at_leaf_index(self, Cmp.Nat, Cmp.Nat, leaf_node, prev_index, prev_address, merged_size, true);
+                ignore MaxBpTree._replace_at_leaf_index(self, Cmp.Nat, Cmp.Nat, leaf_node, prev_index, prev_address, merged_size);
                 // Debug.print("after replace");
                 // Debug.print("Leaf Node: " # debug_show MaxBpTreeLeaf.toText(leaf_node, Nat.toText, Nat.toText));
                 // Debug.print("Next Node: " # debug_show MaxBpTreeLeaf.toText(next_node, Nat.toText, Nat.toText));
 
-                ignore MaxBpTree._remove_from_leaf(self, Cmp.Nat, Cmp.Nat, next_node, next_index, true);
+                ignore MaxBpTree._remove_from_leaf(self, Cmp.Nat, Cmp.Nat, next_node, next_index);
 
                 // Debug.print("after remove");
                 // Debug.print("Leaf Node: " # debug_show MaxBpTreeLeaf.toText(leaf_node, Nat.toText, Nat.toText));
@@ -227,15 +235,19 @@ module FreeMemory {
         if (size < size_needed) return null;
 
         if (size == size_needed) {
+            // Debug.print("reallocate: removing block of size " # debug_show size);
+            // Debug.print(debug_show toArray(self));
             ignore MaxBpTree.remove(self, Cmp.Nat, Cmp.Nat, address);
             return ?address;
         };
 
         let split_size = (size - size_needed) : Nat;
-        let trimmed_address = address + split_size;
 
+        // Debug.print("reallocate: splitting block of size " # debug_show size # " into " # debug_show (size_needed, split_size));
         // update the size of the retrieved pointer in free memory
-        ignore MaxBpTree.insert(self, Cmp.Nat, Cmp.Nat, address, split_size);
+        let ?max = MaxBpTree.replaceMaxValue(self, Cmp.Nat, Cmp.Nat, split_size) else Debug.trap("max block should exist");
+
+        let trimmed_address = max.0 + split_size;
 
         return ?trimmed_address;
     };

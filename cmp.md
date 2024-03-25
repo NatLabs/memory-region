@@ -167,3 +167,27 @@ Heap
 |              | no merge (insert) | merge prev | merge next | merge prev and next |
 | :----------- | ----------------: | ---------: | ---------: | ------------------: |
 | MemoryRegion |         1_433_164 |  1_337_168 |  1_337_168 |           2_072_392 |
+
+
+#### Updated Max B+ Tree's insert() and remove() function to perform their operations from the leaf to the root node
+Instructions
+
+|                                              | MemoryRegion | VersionedMemoryRegion |
+| :------------------------------------------- | -----------: | --------------------: |
+| allocate()                                   |   10_841_989 |            11_183_179 |
+| deallocate()                                 |  109_250_552 |           116_041_723 |
+| using allocate() to reallocate stored blocks |  324_357_020 |           326_063_132 |
+| Preliminary Step: Sort Addresses             |  254_134_939 |           254_235_927 |
+| deallocate() worst case                      |  143_736_844 |           143_618_701 |
+
+
+Heap
+
+|                                              | MemoryRegion | VersionedMemoryRegion |
+| :------------------------------------------- | -----------: | --------------------: |
+| allocate()                                   |       33_128 |                33_044 |
+| deallocate()                                 |    1_213_780 |             1_296_660 |
+| using allocate() to reallocate stored blocks |    6_175_864 |             6_427_212 |
+| Preliminary Step: Sort Addresses             |    5_883_748 |             5_887_788 |
+| deallocate() worst case                      |    1_315_564 |             1_322_524 |
+

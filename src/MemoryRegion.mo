@@ -160,7 +160,7 @@ module MemoryRegion {
     /// As a result it is be best to assume that the address of the memory block will change after a resize.
     public func resize(self: MemoryRegion, address: Nat, size: Nat, new_size: Nat) : Nat {
         if (address + size > self.size) {
-            Debug.print(debug_show (address, size, self.size));
+            // Debug.print(debug_show (address, size, self.size));
             return Debug.trap("MemoryRegion.deallocate(): memory block out of bounds");
         };
 
@@ -168,7 +168,7 @@ module MemoryRegion {
 
         switch(FreeMemory.reclaim(self.free_memory, address, size, ?new_size)) {
             case (?new_address) {
-                // Debug.print("reclaimed " # debug_show (address, size, new_size) # " at " # debug_show new_address);
+                // Debug.print("resized " # debug_show (address, size, new_size) # " at " # debug_show new_address);
                 self.deallocated += size;
                 self.deallocated -= new_size;
                 return new_address;
@@ -176,7 +176,13 @@ module MemoryRegion {
             case (null) self.deallocated += size;
         };
 
-        allocate(self, new_size);
+        // Debug.print("could not resize.  allocating new block of size " # debug_show new_size);
+        // Debug.print("deallocated: " # debug_show self.deallocated);
+
+        let new_address = allocate(self, new_size);
+        // Debug.print("deallocated: " # debug_show self.deallocated);
+
+        new_address
     };
 
     public func grow(self : MemoryRegion, pages : Nat) : Nat {
@@ -236,13 +242,15 @@ module MemoryRegion {
         blob;
     };
 
-    public func replaceBlob(self : MemoryRegion, address : Nat, size : Nat, blob : Blob) : Blob {
-        let old_blob = Region.loadBlob(self.region, Nat64.fromNat(address), size);
-
+    /// Replaces a blob at the given address with a new blob of arbitrary size.
+    /// The function will try to resize the memory block if possible.
+    /// If it is not possible it deallocates the block and allocates a new one.
+    /// The function returns the address to the new memory block.
+    public func replaceBlob(self : MemoryRegion, address : Nat, size : Nat, blob : Blob) : Nat {
         let new_address = resize(self, address, size, blob.size());
         storeBlob(self, new_address, blob);
 
-        old_blob;
+        return new_address;
     };
 
     public func addNat8(self : MemoryRegion, value : Nat8) : Nat {

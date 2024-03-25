@@ -1,27 +1,10 @@
 // @testmode wasi
-import Array "mo:base/Array";
-import Buffer "mo:base/Buffer";
-import Debug "mo:base/Debug";
-import Iter "mo:base/Iter";
-import Region "mo:base/Region";
-import Nat "mo:base/Nat";
-
 import { test; suite } "mo:test";
-import Fuzz "mo:fuzz";
-import MaxBpTree "mo:augmented-btrees/MaxBpTree";
-import Cmp "mo:augmented-btrees/Cmp";
-import MaxBpTreeMethods "mo:augmented-btrees/MaxBpTree/Methods";
-
-import Itertools "mo:itertools/Iter";
-import BTree "mo:stableheapbtreemap/BTree";
-import Set "mo:map/Set";
-
 import MemoryRegionV0 "mo:memory-region-v0_1_1/MemoryRegion";
 
 import MemoryRegion "../src/MemoryRegion";
 import VersionedMemoryRegion "../src/VersionedMemoryRegion";
 import Migrations "../src/Migrations";
-import Utils "../src/Utils";
 
 type VersionedMemoryRegion = VersionedMemoryRegion.VersionedMemoryRegion;
 

@@ -102,7 +102,7 @@ Benchmarking the performance with 10k entries for the versions deployed to mops.
 | :---------------------- | ------------: | ----------: |
 | allocate()              |    12_771_326 |  10_844_189 |
 | deallocate()            |   344_454_528 | 110_464_205 |
-| using allocate() to reallocate stored blocks |   270_057_034 | 320_486_218 |
+| using allocate() to reallocate stored blocks |   270_057_034 | 292_826_546 |
 | deallocate() worst case |   421_444_478 | 146_852_645 |
 
 **Heap**
@@ -111,6 +111,6 @@ Benchmarking the performance with 10k entries for the versions deployed to mops.
 | :---------------------- | ------------: | ---------: |
 | allocate()              |        33_056 |     33_308 |
 | deallocate()            |     5_229_612 |  1_364_940 |
-| using allocate() to reallocate stored blocks |     4_776_192 |  7_088_256 |
+| using allocate() to reallocate stored blocks |     4_776_192 |  6_010_204 |
 | deallocate() worst case |     6_118_240 |  1_684_440 |
 

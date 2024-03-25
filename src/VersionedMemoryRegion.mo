@@ -135,7 +135,7 @@ module VersionedMemoryRegion {
         MemoryRegion.removeBlob(state, address, size);
     };
 
-    public func replaceBlob(versions : VersionedMemoryRegion, address : Nat, size : Nat, blob : Blob) : Blob {
+    public func replaceBlob(versions : VersionedMemoryRegion, address : Nat, size : Nat, blob : Blob) : Nat {
         let state = Migrations.getCurrentVersion(versions);
         MemoryRegion.replaceBlob(state, address, size, blob);
      };
