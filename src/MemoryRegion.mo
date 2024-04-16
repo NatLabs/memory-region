@@ -429,12 +429,26 @@ module MemoryRegion {
         int64;
     };
 
-    // Todo: unsure about float size. could be 32 or 64 bits
-    // public func addFloat(self : MemoryRegion, value : Float) : Nat {
-    //     let address = allocate(self, 4); 
-    //     Region.storeFloat(self.region, Nat64.fromNat(address), value);
+    public func addFloat(self : MemoryRegion, value : Float) : Nat {
+        let address = allocate(self, 8); 
+        Region.storeFloat(self.region, Nat64.fromNat(address), value);
 
-    //     address;
-    // };
+        address;
+    };
+
+    public func storeFloat(self: MemoryRegion, address: Nat, value: Float) {
+        Region.storeFloat(self.region, Nat64.fromNat(address), value);
+    };
+
+    public func loadFloat(self : MemoryRegion, address : Nat) : Float {
+        Region.loadFloat(self.region, Nat64.fromNat(address));
+    };
+
+    public func removeFloat(self : MemoryRegion, address : Nat) : Float {
+        let float = Region.loadFloat(self.region, Nat64.fromNat(address));
+        deallocate(self, address, 8);
+
+        float;
+    };
 
 };
