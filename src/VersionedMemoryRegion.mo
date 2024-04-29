@@ -1,5 +1,6 @@
 import Region "mo:base/Region";
 import Result "mo:base/Result";
+import Iter "mo:base/Iter";
 
 import FreeMemory "FreeMemory";
 import Migrations "Migrations";
@@ -7,7 +8,7 @@ import MemoryRegion "MemoryRegion";
 
 module VersionedMemoryRegion {
 
-    public type Pointer = (address : Nat, size : Nat);
+    public type MemoryBlock = (address : Nat, size : Nat);
     type Result<T, E> = Result.Result<T, E>;
 
     public type FreeMemory = FreeMemory.FreeMemory;
@@ -113,6 +114,21 @@ module VersionedMemoryRegion {
     public func clear(versions : VersionedMemoryRegion) {
         let state = Migrations.getCurrentVersion(versions);
         MemoryRegion.clear(state);
+    };
+
+    public func deallocatedBlocksInRange(versions : VersionedMemoryRegion, start : Nat, end : Nat) : Iter.Iter<MemoryBlock> {
+        let state = Migrations.getCurrentVersion(versions);
+        MemoryRegion.deallocatedBlocksInRange(state, start, end);
+    };
+
+    public func allocatedBlocksInRange(versions : VersionedMemoryRegion, start : Nat, end : Nat) : Iter.Iter<MemoryBlock> {
+        let state = Migrations.getCurrentVersion(versions);
+        MemoryRegion.allocatedBlocksInRange(state, start, end);
+    };
+
+    public func deallocateRange(versions : VersionedMemoryRegion, start : Nat, end : Nat) {
+        let state = Migrations.getCurrentVersion(versions);
+        MemoryRegion.deallocateRange(state, start, end);
     };
 
     public func storeBlob(versions : VersionedMemoryRegion, address : Nat, blob : Blob) {

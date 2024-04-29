@@ -13,8 +13,8 @@ module {
         let fuzz = Fuzz.Fuzz();
 
         let bench = Bench.Bench();
-        bench.name("MemoryRegion merge perf");
-        bench.description("Benchmarking the performance with 10k entries");
+        bench.name("MemoryRegion merge performance");
+        bench.description("Benchmarking with 10k entries");
 
         bench.cols(["MemoryRegion"]);
         bench.rows(["no merge (insert)", "merge prev", "merge next", "merge prev and next"]);

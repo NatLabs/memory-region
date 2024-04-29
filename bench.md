@@ -191,3 +191,51 @@ Heap
 | Preliminary Step: Sort Addresses             |    5_883_748 |             5_887_788 |
 | deallocate() worst case                      |    1_315_564 |             1_322_524 |
 
+#### `v1.2.0` - Update deallocate() so it removes the blocks in the range of the last allocated block and the end of the region, reducing the number of blocks that needs to be stored.
+
+Instructions
+
+|                                              | MemoryRegion | VersionedMemoryRegion |
+| :------------------------------------------- | -----------: | --------------------: |
+| allocate()                                   |   10_841_989 |            11_183_179 |
+| deallocate()                                 |  110_140_552 |           116_931_723 |
+| using allocate() to reallocate stored blocks |  293_522_318 |           296_539_992 |
+| Preliminary Step: Sort Addresses             |  254_134_939 |           254_235_927 |
+| deallocate() worst case                      |  144_626_844 |           144_508_701 |
+
+
+Heap
+
+|                                              | MemoryRegion | VersionedMemoryRegion |
+| :------------------------------------------- | -----------: | --------------------: |
+| allocate()                                   |       33_128 |                33_044 |
+| deallocate()                                 |    1_213_780 |             1_296_660 |
+| using allocate() to reallocate stored blocks |    6_010_204 |             6_273_872 |
+| Preliminary Step: Sort Addresses             |    5_883_748 |             5_887_788 |
+| deallocate() worst case                      |    1_315_564 |             1_322_524 |
+
+
+
+**MemoryRegion merge performance**
+
+Benchmarking the performance with 10k entries
+
+
+Instructions
+
+|                     | MemoryRegion |
+| :------------------ | -----------: |
+| no merge (insert)   |  102_794_506 |
+| merge prev          |   98_316_901 |
+| merge next          |   97_794_363 |
+| merge prev and next |  185_967_330 |
+
+
+Heap
+
+|                     | MemoryRegion |
+| :------------------ | -----------: |
+| no merge (insert)   |    1_449_912 |
+| merge prev          |      977_168 |
+| merge next          |      977_120 |
+| merge prev and next |    1_512_668 |

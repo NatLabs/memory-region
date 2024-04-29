@@ -12,9 +12,11 @@ import ArrayMut "mo:augmented-btrees/internal/ArrayMut";
 import MaxBpTreeBranch "mo:augmented-btrees/MaxBpTree/Branch";
 import MaxBpTreeLeaf "mo:augmented-btrees/MaxBpTree/Leaf";
 import MaxBpTreeTypes "mo:augmented-btrees/MaxBpTree/Types";
+import RevIter "mo:itertools/RevIter";
 
 module FreeMemory {
-    public type Pointer = (address : Nat, size : Nat);
+    type RevIter<A> = RevIter.RevIter<A>;
+    public type MemoryBlock = (address : Nat, size : Nat);
     type Result<T, E> = Result.Result<T, E>;
 
     let { Const = C } = MaxBpTreeTypes;
@@ -250,6 +252,10 @@ module FreeMemory {
         let trimmed_address = max.0 + split_size;
 
         return ?trimmed_address;
+    };
+
+    public func deallocated_blocks_in_range(self : FreeMemory, start: Nat, end: Nat) : RevIter<(Nat, Nat)> {
+        MaxBpTree.scan<Nat, Nat>(self, Cmp.Nat, start, (end - 1));
     };
 
     // Checks if the given address is properly freed, that is, if is fully contained within a free block

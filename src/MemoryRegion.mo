@@ -10,9 +10,12 @@ import Int8 "mo:base/Int8";
 import Int16 "mo:base/Int16";
 import Int32 "mo:base/Int32";
 import Int64 "mo:base/Int64";
+import Iter "mo:base/Iter";
 
 import MaxBpTree "mo:augmented-btrees/MaxBpTree";
 import Cmp "mo:augmented-btrees/Cmp";
+import RevIter "mo:itertools/RevIter";
+import Itertools "mo:itertools/Iter";
 
 import Utils "Utils";
 import FreeMemory "FreeMemory";
@@ -20,8 +23,9 @@ import Migrations "Migrations";
 
 module MemoryRegion {
 
-    public type Pointer = (address : Nat, size : Nat);
+    public type MemoryBlock = (address : Nat, size : Nat);
     type Result<T, E> = Result.Result<T, E>;
+    type RevIter<A> = RevIter.RevIter<A>;
 
     public type FreeMemory = FreeMemory.FreeMemory;
 
@@ -47,7 +51,7 @@ module MemoryRegion {
         /// Total number of bytes deallocated.
         deallocated : Nat;
     };
-    
+
     public let PageSize : Nat = 65536;
 
     public func new() : MemoryRegion {
@@ -63,14 +67,14 @@ module MemoryRegion {
     };
 
     /// Create MemoryRegion from shared internal data
-    public func fromVersioned(prev_version: VersionedMemoryRegion): MemoryRegion {
+    public func fromVersioned(prev_version : VersionedMemoryRegion) : MemoryRegion {
         let migrated = Migrations.upgrade(prev_version);
         Migrations.getCurrentVersion(migrated);
     };
 
-    /// Return the simplest state of the MemoryRegion's data so that it only contains 
+    /// Return the simplest state of the MemoryRegion's data so that it only contains
     /// primitives and can be recreated by any other version
-    public func toVersioned(self: MemoryRegion) : VersionedMemoryRegion  {
+    public func toVersioned(self : MemoryRegion) : VersionedMemoryRegion {
         #v1(self);
     };
 
@@ -84,7 +88,7 @@ module MemoryRegion {
     };
 
     /// Returns the id of the Region.
-    public func id(self: MemoryRegion) : Nat {
+    public func id(self : MemoryRegion) : Nat {
         Region.id(self.region);
     };
 
@@ -134,6 +138,18 @@ module MemoryRegion {
             return Debug.trap("MemoryRegion.deallocate(): memory block out of bounds");
         };
 
+        if (address + size == self.size) {
+            self.size -= size;
+
+            let ?last_entry = MaxBpTree.max<Nat, Nat>(self.free_memory) else return;
+            if (last_entry.0 + last_entry.1 == address) {
+                ignore MaxBpTree.remove<Nat, Nat>(self.free_memory, Cmp.Nat, Cmp.Nat, last_entry.0);
+                self.deallocated -= last_entry.1;
+                self.size -= last_entry.1;
+            };
+            return;
+        };
+
         assert null == FreeMemory.reclaim(self.free_memory, address, size, null);
         self.deallocated += size; // move to free memory
     };
@@ -151,14 +167,14 @@ module MemoryRegion {
 
         let address = self.size;
         self.size += bytes;
-        
+
         return address;
     };
 
-    /// Tries to resize a memory block. 
+    /// Tries to resize a memory block.
     /// If it is not possible it deallocates the block and allocates a new one.
     /// As a result it is be best to assume that the address of the memory block will change after a resize.
-    public func resize(self: MemoryRegion, address: Nat, size: Nat, new_size: Nat) : Nat {
+    public func resize(self : MemoryRegion, address : Nat, size : Nat, new_size : Nat) : Nat {
         if (address + size > self.size) {
             // Debug.print(debug_show (address, size, self.size));
             return Debug.trap("MemoryRegion.deallocate(): memory block out of bounds");
@@ -166,7 +182,7 @@ module MemoryRegion {
 
         // Debug.print("resizing " # debug_show (address, size, new_size));
 
-        switch(FreeMemory.reclaim(self.free_memory, address, size, ?new_size)) {
+        switch (FreeMemory.reclaim(self.free_memory, address, size, ?new_size)) {
             case (?new_address) {
                 // Debug.print("resized " # debug_show (address, size, new_size) # " at " # debug_show new_address);
                 self.deallocated += size;
@@ -182,7 +198,7 @@ module MemoryRegion {
         let new_address = allocate(self, new_size);
         // Debug.print("deallocated: " # debug_show self.deallocated);
 
-        new_address
+        new_address;
     };
 
     public func grow(self : MemoryRegion, pages : Nat) : Nat {
@@ -206,18 +222,69 @@ module MemoryRegion {
         self.pages += pages_to_allocate;
     };
 
-    public func isFreed(self: MemoryRegion, address : Nat, size : Nat) : Result<Bool, Text> {
+    public func isFreed(self : MemoryRegion, address : Nat, size : Nat) : Result<Bool, Text> {
         FreeMemory.contains(self.free_memory, address, size);
     };
 
-    /// Marks all the memory blocks in the region as deallocated.
-    /// Note however that the data is not cleared and is only overwritten when it is reallocated.
-    /// The size will be the total number deallocated bytes and the allocated bytes will be reset to 0.
+    /// Clears the memory region and deallocates all blocks.
+    /// Note however that the deallocated blocks are not garbage collected, they are just marked so they can be reused.
+    /// To get the true size of the memory region you need to call `capacity()`.
     public func clear(self : MemoryRegion) {
         MaxBpTree.clear(self.free_memory);
-        self.deallocated := self.size;
-        MaxBpTree.clear(self.free_memory);
-        ignore MaxBpTree.insert(self.free_memory, Cmp.Nat, Cmp.Nat, 0, self.size);
+        self.size := 0;
+        self.deallocated := 0;
+    };
+
+    /// Deallocate all blocks in the given range.
+    /// The range is inclusive of the start and exclusive of the end. `[start, end)`
+    public func deallocateRange(self : MemoryRegion, start : Nat, end : Nat) {
+        for (block in allocatedBlocksInRange(self, start, end)) {
+            deallocate(self, block.0, block.1);
+        };
+    };
+
+    /// Retrieves all the deallocated blocks in the given range
+    /// The range is inclusive of the start and exclusive of the end. `[start, end)`
+    public func deallocatedBlocksInRange(self : MemoryRegion, start_address : Nat, end_address : Nat) : RevIter<MemoryBlock> {
+        FreeMemory.deallocated_blocks_in_range(self.free_memory, start_address, end_address);
+    };
+
+    /// Retrieves all the allocated blocks in the given range
+    /// The range is inclusive of the start and exclusive of the end. `[start, end)`
+    public func allocatedBlocksInRange(self : MemoryRegion, start : Nat, end : Nat) : Iter.Iter<MemoryBlock> {
+        var start_address = start;
+        let end_address = Nat.min(self.size, end);
+
+        let deallocated_blocks = deallocatedBlocksInRange(self, start_address, end_address);
+
+        let iter = Iter.map<MemoryBlock, MemoryBlock>(
+            Itertools.add(
+                Itertools.skipWhile(
+                    deallocated_blocks,
+                    func(block : MemoryBlock) : Bool {
+                        if (block.0 <= start_address) {
+                            start_address := block.0 + block.1;
+                            return true;
+                        };
+
+                        false
+                    },
+                ),
+                (end_address, 0)
+            ),
+            func(deallocated_block : MemoryBlock) : MemoryBlock {
+                assert start_address <= deallocated_block.0;
+                let size = deallocated_block.0 - start_address;
+                let allocated_block = (start_address, size);
+                start_address := deallocated_block.0 + deallocated_block.1;
+                allocated_block;
+            },
+        );
+
+        Itertools.takeWhile(iter, func(block : MemoryBlock) : Bool {
+            block.0 < end_address
+        });
+
     };
 
     public func storeBlob(self : MemoryRegion, address : Nat, blob : Blob) {
@@ -352,7 +419,7 @@ module MemoryRegion {
         Region.loadInt8(self.region, Nat64.fromNat(address));
     };
 
-    public func storeInt8(self: MemoryRegion, address: Nat, value: Int8) {
+    public func storeInt8(self : MemoryRegion, address : Nat, value : Int8) {
         Region.storeInt8(self.region, Nat64.fromNat(address), value);
     };
 
@@ -374,7 +441,7 @@ module MemoryRegion {
         Region.loadInt16(self.region, Nat64.fromNat(address));
     };
 
-    public func storeInt16(self: MemoryRegion, address: Nat, value: Int16) {
+    public func storeInt16(self : MemoryRegion, address : Nat, value : Int16) {
         Region.storeInt16(self.region, Nat64.fromNat(address), value);
     };
 
@@ -392,7 +459,7 @@ module MemoryRegion {
         address;
     };
 
-    public func storeInt32(self: MemoryRegion, address: Nat, value: Int32) {
+    public func storeInt32(self : MemoryRegion, address : Nat, value : Int32) {
         Region.storeInt32(self.region, Nat64.fromNat(address), value);
     };
 
@@ -414,7 +481,7 @@ module MemoryRegion {
         address;
     };
 
-    public func storeInt64(self: MemoryRegion, address: Nat, value: Int64) {
+    public func storeInt64(self : MemoryRegion, address : Nat, value : Int64) {
         Region.storeInt64(self.region, Nat64.fromNat(address), value);
     };
 
@@ -430,13 +497,13 @@ module MemoryRegion {
     };
 
     public func addFloat(self : MemoryRegion, value : Float) : Nat {
-        let address = allocate(self, 8); 
+        let address = allocate(self, 8);
         Region.storeFloat(self.region, Nat64.fromNat(address), value);
 
         address;
     };
 
-    public func storeFloat(self: MemoryRegion, address: Nat, value: Float) {
+    public func storeFloat(self : MemoryRegion, address : Nat, value : Float) {
         Region.storeFloat(self.region, Nat64.fromNat(address), value);
     };
 
