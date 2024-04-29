@@ -538,7 +538,7 @@ suite(
             };
 
             var prev_address = 70;
-            for ((address, size) in MemoryRegion.deallocatedBlocksInRange(memory_region, 70, 9_900)){
+            for ((address, size) in MemoryRegion.deallocatedBlocksInRange(memory_region, 70, 4500)){
                 assert size == 5;
                 assert address == prev_address;
                 let ?block_size = MaxBpTree.get(memory_region.free_memory, Cmp.Nat, address);
@@ -546,7 +546,18 @@ suite(
                 prev_address += 10;
             };
 
-            assert prev_address == 9_900;
+            assert prev_address == 4500;
+
+            prev_address := 7500;
+            for ((address, size) in MemoryRegion.deallocatedBlocksInRange(memory_region, 7500, 10_000)){
+                assert size == 5;
+                assert address == prev_address;
+                let ?block_size = MaxBpTree.get(memory_region.free_memory, Cmp.Nat, address);
+                assert size <= block_size;
+                prev_address += 10;
+            };
+
+            assert prev_address == 10_000;
         });
 
         test("allocatedBlocksInRange()", func(){
@@ -561,6 +572,18 @@ suite(
             };
 
             assert prev_address == 9_905;
+        });
+
+        test("deallocateRange()", func(){
+
+            let start = 4500;
+            let end = 7900;
+
+            MemoryRegion.deallocateRange(memory_region, 4500, 7900);
+
+            for ((address, size) in MemoryRegion.allocatedBlocksInRange(memory_region, 0, 10_000)){
+                assert address < start or address > end;
+            };
         });
     },
 );

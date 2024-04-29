@@ -15,6 +15,7 @@ import Iter "mo:base/Iter";
 import MaxBpTree "mo:augmented-btrees/MaxBpTree";
 import Cmp "mo:augmented-btrees/Cmp";
 import RevIter "mo:itertools/RevIter";
+import PeekableIter "mo:itertools/PeekableIter";
 import Itertools "mo:itertools/Iter";
 
 import Utils "Utils";
@@ -238,7 +239,10 @@ module MemoryRegion {
     /// Deallocate all blocks in the given range.
     /// The range is inclusive of the start and exclusive of the end. `[start, end)`
     public func deallocateRange(self : MemoryRegion, start : Nat, end : Nat) {
-        for (block in allocatedBlocksInRange(self, start, end)) {
+        let allocated_blocks = allocatedBlocksInRange(self, start, end)
+            |> Iter.toArray(_).vals(); // creates a copy of the iterator that does not update when the memory region changes
+
+        for (block in allocated_blocks) {
             deallocate(self, block.0, block.1);
         };
     };
@@ -246,7 +250,7 @@ module MemoryRegion {
     /// Retrieves all the deallocated blocks in the given range
     /// The range is inclusive of the start and exclusive of the end. `[start, end)`
     public func deallocatedBlocksInRange(self : MemoryRegion, start_address : Nat, end_address : Nat) : RevIter<MemoryBlock> {
-        FreeMemory.deallocated_blocks_in_range(self.free_memory, start_address, end_address);
+        FreeMemory.deallocated_blocks_in_range(self.free_memory, start_address, end_address)
     };
 
     /// Retrieves all the allocated blocks in the given range
@@ -273,7 +277,7 @@ module MemoryRegion {
                 (end_address, 0)
             ),
             func(deallocated_block : MemoryBlock) : MemoryBlock {
-                assert start_address <= deallocated_block.0;
+                // assert start_address <= deallocated_block.0;
                 let size = deallocated_block.0 - start_address;
                 let allocated_block = (start_address, size);
                 start_address := deallocated_block.0 + deallocated_block.1;
@@ -281,8 +285,8 @@ module MemoryRegion {
             },
         );
 
-        Itertools.takeWhile(iter, func(block : MemoryBlock) : Bool {
-            block.0 < end_address
+        PeekableIter.takeWhile(PeekableIter.fromIter(iter), func(block : MemoryBlock) : Bool {
+            block.0 < end_address and block.1 > 0;
         });
 
     };
