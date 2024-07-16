@@ -53,7 +53,8 @@ module MemoryRegion {
         deallocated : Nat;
     };
 
-    public let PageSize : Nat = 65536;
+    public let PageSize : Nat = 65536; // backwards compatible
+    public let PAGE_SIZE : Nat = 65536;
 
     public func new() : MemoryRegion {
         let self = {
@@ -202,6 +203,7 @@ module MemoryRegion {
         new_address;
     };
 
+    /// Grows the memory region by the given number of `pages`.
     public func grow(self : MemoryRegion, pages : Nat) : Nat {
         let prev_pages = Region.grow(self.region, Nat64.fromNat(pages));
         self.pages += pages;
@@ -227,6 +229,18 @@ module MemoryRegion {
         FreeMemory.contains(self.free_memory, address, size);
     };
 
+    /// Checks if a block is allocated or not.
+    /// A block is allocated if it is currently in use and has not been marked as deallocated
+    public func isAllocated(self : MemoryRegion, address : Nat) : Bool {
+
+        if (address >= self.size) return false;
+
+        let is_deallocated = FreeMemory.is_block_deallocated(self.free_memory, address);
+
+        return not is_deallocated;
+
+    };
+
     /// Clears the memory region and deallocates all blocks.
     /// Note however that the deallocated blocks are not garbage collected, they are just marked so they can be reused.
     /// To get the true size of the memory region you need to call `capacity()`.
@@ -240,7 +254,7 @@ module MemoryRegion {
     /// The range is inclusive of the start and exclusive of the end. `[start, end)`
     public func deallocateRange(self : MemoryRegion, start : Nat, end : Nat) {
         let allocated_blocks = allocatedBlocksInRange(self, start, end)
-            |> Iter.toArray(_).vals(); // creates a copy of the iterator that does not update when the memory region changes
+        |> Iter.toArray(_).vals(); // creates a copy of the iterator that does not update when the memory region changes
 
         for (block in allocated_blocks) {
             deallocate(self, block.0, block.1);
@@ -250,7 +264,7 @@ module MemoryRegion {
     /// Retrieves all the deallocated blocks in the given range
     /// The range is inclusive of the start and exclusive of the end. `[start, end)`
     public func deallocatedBlocksInRange(self : MemoryRegion, start_address : Nat, end_address : Nat) : RevIter<MemoryBlock> {
-        FreeMemory.deallocated_blocks_in_range(self.free_memory, start_address, end_address)
+        FreeMemory.deallocated_blocks_in_range(self.free_memory, start_address, end_address);
     };
 
     /// Retrieves all the allocated blocks in the given range
@@ -271,10 +285,10 @@ module MemoryRegion {
                             return true;
                         };
 
-                        false
+                        false;
                     },
                 ),
-                (end_address, 0)
+                (end_address, 0),
             ),
             func(deallocated_block : MemoryBlock) : MemoryBlock {
                 // assert start_address <= deallocated_block.0;
@@ -285,9 +299,12 @@ module MemoryRegion {
             },
         );
 
-        PeekableIter.takeWhile(PeekableIter.fromIter(iter), func(block : MemoryBlock) : Bool {
-            block.0 < end_address and block.1 > 0;
-        });
+        PeekableIter.takeWhile(
+            PeekableIter.fromIter(iter),
+            func(block : MemoryBlock) : Bool {
+                block.0 < end_address and block.1 > 0;
+            },
+        );
 
     };
 

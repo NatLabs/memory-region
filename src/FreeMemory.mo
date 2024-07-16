@@ -28,9 +28,9 @@ module FreeMemory {
     };
 
     // Reclaims the memory block at the given address and merges it to adjacent free memory blocks if possible.
-    // 
+    //
     // If the memory block is resized, when size_needed is included, it returns the address for the resized block.
-    // If the size_needed greater than the size of the block, it returns null. 
+    // If the size_needed greater than the size of the block, it returns null.
     public func reclaim(self : FreeMemory, address : Nat, size : Nat, size_needed : ?Nat) : ?Nat {
         if (size == 0) return null;
 
@@ -52,7 +52,7 @@ module FreeMemory {
 
         let expected_index = Int.abs(int_index) - 1 : Nat; // the pos of the floor
         var int_prev_index : Int = 0;
-        
+
         let prev_index = do {
 
             if (expected_index == 0) {
@@ -63,7 +63,7 @@ module FreeMemory {
                     };
                     case (_) {
                         int_prev_index := -1;
-                        0
+                        0;
                     };
                 };
             } else {
@@ -71,7 +71,7 @@ module FreeMemory {
             };
         };
 
-        if (int_prev_index != -1){
+        if (int_prev_index != -1) {
             int_prev_index := prev_index;
         };
 
@@ -113,7 +113,7 @@ module FreeMemory {
                         if (size_needed < size) {
                             let reclaimed_size = size - size_needed : Nat;
                             MaxBpTree._insert_at_leaf_index(self, Cmp.Nat, Cmp.Nat, leaf_node, Int.abs(int_prev_index + 1), address, reclaimed_size);
-                            
+
                             let resized_address = address + reclaimed_size;
                             return ?resized_address;
                         };
@@ -226,7 +226,7 @@ module FreeMemory {
     public func reallocate(self : FreeMemory, size_needed : Nat) : ?(address : Nat) {
         if (size_needed == 0) return ?Nat64.toNat(Nat64.maximumValue); // the library does not store 0 sized blocks, so any address will do as it does not read from it
 
-        let max_block = switch(MaxBpTree.maxValue(self)){
+        let max_block = switch (MaxBpTree.maxValue(self)) {
             case (null) return null;
             case (?max) max;
         };
@@ -254,7 +254,7 @@ module FreeMemory {
         return ?trimmed_address;
     };
 
-    public func deallocated_blocks_in_range(self : FreeMemory, start: Nat, end: Nat) : RevIter<(Nat, Nat)> {
+    public func deallocated_blocks_in_range(self : FreeMemory, start : Nat, end : Nat) : RevIter<(Nat, Nat)> {
         MaxBpTree.scan<Nat, Nat>(self, Cmp.Nat, start, (end - 1));
     };
 
@@ -265,6 +265,18 @@ module FreeMemory {
 
         if (exists) return #ok(true);
         #err("improperly freed memory");
+    };
+
+    /// returns true if the address is found in any of the deallocated blocks range
+    public func is_block_deallocated(self : FreeMemory, address : Nat) : Bool {
+        let ?block_range = MaxBpTree.getFloor(self, Cmp.Nat, address) else return false;
+
+        let (start, length) = block_range;
+
+        let end = start + length;
+
+        return start <= address and end > address;
+
     };
 
     public func total_size(self : FreeMemory) : Nat {
