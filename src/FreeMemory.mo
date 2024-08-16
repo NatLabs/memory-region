@@ -224,7 +224,7 @@ module FreeMemory {
     };
 
     public func reallocate(self : FreeMemory, size_needed : Nat) : ?(address : Nat) {
-        if (size_needed == 0) return ?Nat64.toNat(Nat64.maximumValue); // the library does not store 0 sized blocks, so any address will do as it does not read from it
+        if (size_needed == 0) return null;
 
         let max_block = switch (MaxBpTree.maxValue(self)) {
             case (null) return null;

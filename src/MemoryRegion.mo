@@ -157,6 +157,10 @@ module MemoryRegion {
     };
 
     public func allocate(self : MemoryRegion, bytes : Nat) : Nat {
+        // the MemoryRegion library does not store 0 sized blocks,
+        // so any address less than or equal to the size will do
+        if (bytes == 0) return self.size;
+
         switch (FreeMemory.reallocate(self.free_memory, bytes)) {
             case (?address) {
                 self.deallocated -= bytes;
