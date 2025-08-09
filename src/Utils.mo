@@ -1,3 +1,6 @@
+import Buffer "mo:base/Buffer";
+import Debug "mo:base/Debug";
+
 import Order "mo:base/Order";
 import Result "mo:base/Result";
 import Prelude "mo:base/Prelude";
@@ -20,16 +23,32 @@ module {
     };
 
     type Result<A, B> = Result.Result<A, B>;
-    
-    public func send_error<OldOk, NewOk, Error>(res: Result<OldOk, Error>): Result<NewOk, Error>{
+
+    public func send_error<OldOk, NewOk, Error>(res : Result<OldOk, Error>) : Result<NewOk, Error> {
         switch (res) {
             case (#ok(_)) Prelude.unreachable();
             case (#err(errorMsg)) #err(errorMsg);
         };
     };
-    
 
-    public func div_ceil(n: Nat, d: Nat) : Nat {
-       (n + (d - 1)) / d;
+    public func div_ceil(n : Nat, d : Nat) : Nat {
+        (n + (d - 1)) / d;
+    };
+
+    public func buffer_swap<A>(buffer : Buffer.Buffer<A>, a : Nat, b : Nat) {
+
+        let elem_a = buffer.get(a);
+        let elem_b = buffer.get(b);
+
+        buffer.put(a, elem_b);
+        buffer.put(b, elem_a);
+
+    };
+
+    public func buffer_swap_remove_last<A>(buffer : Buffer.Buffer<A>, index : Nat) : ?A {
+        let last_index = buffer.size() - 1;
+
+        buffer_swap(buffer, index, last_index);
+        buffer.removeLast();
     };
 };

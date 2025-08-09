@@ -134,25 +134,27 @@ module MemoryRegion {
     };
 
     public func deallocate(self : MemoryRegion, address : Nat, size : Nat) {
+        if (size == 0) return;
 
         if (address + size > self.size) {
             Debug.print(debug_show (address, size, self.size));
             return Debug.trap("MemoryRegion.deallocate(): memory block out of bounds");
         };
 
-        if (address + size == self.size) {
-            self.size -= size;
+        // if (address + size == self.size) {
+        //     self.size -= size;
 
-            let ?last_entry = MaxBpTree.max<Nat, Nat>(self.free_memory) else return;
-            if (last_entry.0 + last_entry.1 == address) {
-                ignore MaxBpTree.remove<Nat, Nat>(self.free_memory, Cmp.Nat, Cmp.Nat, last_entry.0);
-                self.deallocated -= last_entry.1;
-                self.size -= last_entry.1;
-            };
-            return;
-        };
+        //     let ?last_entry = MaxBpTree.max<Nat, Nat>(self.free_memory) else return;
 
-        assert null == FreeMemory.reclaim(self.free_memory, address, size, null);
+        //     if (last_entry.0 + last_entry.1 == address) {
+        //         ignore MaxBpTree.remove<Nat, Nat>(self.free_memory, Cmp.Nat, Cmp.Nat, last_entry.0);
+        //         self.deallocated -= last_entry.1;
+        //         self.size -= last_entry.1;
+        //     };
+        //     return;
+        // };
+
+        assert null == FreeMemory.reclaim_and_assign_new_size(self.free_memory, address, size, null);
         self.deallocated += size; // move to free memory
     };
 
@@ -182,13 +184,13 @@ module MemoryRegion {
     /// As a result it is be best to assume that the address of the memory block will change after a resize.
     public func resize(self : MemoryRegion, address : Nat, size : Nat, new_size : Nat) : Nat {
         if (address + size > self.size) {
-            // Debug.print(debug_show (address, size, self.size));
-            return Debug.trap("MemoryRegion.deallocate(): memory block out of bounds");
+            Debug.print(debug_show (address, size, self.size));
+            return Debug.trap("MemoryRegion.resize(): memory block out of bounds");
         };
 
         // Debug.print("resizing " # debug_show (address, size, new_size));
 
-        switch (FreeMemory.reclaim(self.free_memory, address, size, ?new_size)) {
+        switch (FreeMemory.reclaim_and_assign_new_size(self.free_memory, address, size, ?new_size)) {
             case (?new_address) {
                 // Debug.print("resized " # debug_show (address, size, new_size) # " at " # debug_show new_address);
                 self.deallocated += size;
@@ -318,17 +320,22 @@ module MemoryRegion {
 
     public func addBlob(self : MemoryRegion, blob : Blob) : Nat {
         let address = allocate(self, blob.size());
-        Region.storeBlob(self.region, Nat64.fromNat(address), blob);
+
+        if (blob.size() > 0) {
+            Region.storeBlob(self.region, Nat64.fromNat(address), blob);
+        };
 
         address;
     };
 
     public func loadBlob(self : MemoryRegion, address : Nat, size : Nat) : Blob {
+        if (size == 0) return ("" : Blob);
+
         Region.loadBlob(self.region, Nat64.fromNat(address), size);
     };
 
     public func removeBlob(self : MemoryRegion, address : Nat, size : Nat) : Blob {
-        let blob = Region.loadBlob(self.region, Nat64.fromNat(address), size);
+        let blob = loadBlob(self, address, size);
         deallocate(self, address, size);
 
         blob;
