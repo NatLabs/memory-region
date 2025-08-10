@@ -237,9 +237,9 @@ module MemoryRegion {
 
     /// Checks if a block is allocated or not.
     /// A block is allocated if it is currently in use and has not been marked as deallocated
-    public func isAllocated(self : MemoryRegion, address : Nat) : Bool {
+    public func isAllocated(self : MemoryRegion, address : Nat, size : Nat) : Bool {
 
-        if (address >= self.size) return false;
+        if (address + size > self.size) return false;
 
         let is_deallocated = FreeMemory.is_block_deallocated(self.free_memory, address);
 
