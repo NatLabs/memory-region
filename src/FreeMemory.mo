@@ -503,6 +503,15 @@ module FreeMemory {
     };
 
     public func deallocated_blocks_in_range(self : FreeMemory, start : Nat, end : Nat) : RevIter<(Nat, Nat)> {
+        switch (MaxBpTree.getFloor(self, Cmp.Nat, start)) {
+            case (null) {};
+            case (?floor) {
+                if (floor.0 + floor.1 > start) {
+                    return MaxBpTree.scan<Nat, Nat>(self, Cmp.Nat, floor.0, (end - 1));
+                };
+            };
+        };
+
         MaxBpTree.scan<Nat, Nat>(self, Cmp.Nat, start, (end - 1));
     };
 

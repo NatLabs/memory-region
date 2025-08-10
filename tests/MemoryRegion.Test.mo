@@ -1,4 +1,5 @@
 // @testmode wasi
+import Array "mo:base/Array";
 import Buffer "mo:base/Buffer";
 import Debug "mo:base/Debug";
 import Iter "mo:base/Iter";
@@ -9,6 +10,8 @@ import Fuzz "mo:fuzz";
 import MaxBpTree "mo:augmented-btrees/MaxBpTree";
 import Cmp "mo:augmented-btrees/Cmp";
 import MaxBpTreeMethods "mo:augmented-btrees/MaxBpTree/Methods";
+import Map "mo:map/Map";
+import BpTree "mo:augmented-btrees/BpTree";
 
 import Itertools "mo:itertools/Iter";
 
@@ -22,20 +25,21 @@ func deallocated_size(memory_region : MemoryRegion.MemoryRegion) : Nat {
     };
 };
 
+let fuzz = Fuzz.fromSeed(0x123);
+
 suite(
     "MemoryRegion",
     func() {
         let limit = 10_000;
 
-        let fuzzer = Fuzz.fromSeed(0x323);
         let memory_region = MemoryRegion.new();
 
         let pointers = Buffer.Buffer<MemoryRegion.MemoryBlock>(limit * 2);
         let blobs = Buffer.Buffer<Blob>(limit);
 
         for (i in Iter.range(0, limit - 1)) {
-            let size = fuzzer.nat.randomRange(1, 100);
-            let blob = fuzzer.blob.randomBlob(size);
+            let size = fuzz.nat.randomRange(1, 100);
+            let blob = fuzz.blob.randomBlob(size);
             blobs.add(blob);
         };
 
@@ -46,7 +50,7 @@ suite(
                 var prev_size = 0;
 
                 for (i in Iter.range(0, limit - 1)) {
-                    let bytes = fuzzer.nat.randomRange(1, 3);
+                    let bytes = fuzz.nat.randomRange(1, 3);
 
                     let address = MemoryRegion.allocate(memory_region, bytes) else return assert false;
                     assert address == prev_size;
@@ -240,7 +244,7 @@ suite(
                 for (i in Iter.range(0, limit - 1)) {
                     order.add(i);
                 };
-                fuzzer.buffer.shuffle(order);
+                fuzz.buffer.shuffle(order);
 
                 assert pointers.size() == limit;
 
@@ -335,8 +339,8 @@ suite(
             "allocate:  reallocate memory blocks",
             func() {
                 label _loop for (i in Iter.range(0, limit - 1)) {
-                    let size = fuzzer.nat.randomRange(1, 100);
-                    let new_blob = fuzzer.blob.randomBlob(size);
+                    let size = fuzz.nat.randomRange(1, 100);
+                    let new_blob = fuzz.blob.randomBlob(size);
                     let new_address = MemoryRegion.allocate(memory_region, size);
 
                     MemoryRegion.storeBlob(memory_region, new_address, new_blob);
@@ -354,7 +358,7 @@ suite(
                 for (i in Iter.range(0, limit - 1)) {
                     order.add(i);
                 };
-                fuzzer.buffer.shuffle(order);
+                fuzz.buffer.shuffle(order);
 
                 assert pointers.size() == limit;
 
@@ -382,8 +386,8 @@ suite(
                         case (_) false;
                     };
 
-                    let new_size = fuzzer.nat.randomRange(1, 2);
-                    let new_blob = fuzzer.blob.randomBlob(new_size);
+                    let new_size = fuzz.nat.randomRange(1, 2);
+                    let new_blob = fuzz.blob.randomBlob(new_size);
 
                     // Debug.print("replacing " # debug_show (address, size) # " with " # debug_show (new_size));
                     // Debug.print("(has_prev, has_next) " # debug_show (has_prev, has_next));
@@ -521,78 +525,182 @@ suite(
                 MemoryRegion.clear(memory_region);
 
                 assert MemoryRegion.allocated(memory_region) == 0;
-                assert MemoryRegion.size(memory_region) == 0;
-                assert MemoryRegion.deallocated(memory_region) == 0;
+                assert MemoryRegion.size(memory_region) == prev_memory_info.size;
+                assert MemoryRegion.deallocated(memory_region) == prev_memory_info.size;
                 assert MemoryRegion.pages(memory_region) == prev_memory_info.pages;
                 assert MemoryRegion.capacity(memory_region) == prev_memory_info.capacity;
 
-                assert MemoryRegion.getFreeMemory(memory_region) == [];
+                assert MemoryRegion.getFreeMemory(memory_region) == [(0, prev_memory_info.size)];
             },
         );
 
-        test(
-            "deallocatedBlocksInRange()",
-            func() {
-                ignore MemoryRegion.allocate(memory_region, 10_000);
-
-                for (i in Itertools.range(0, 10_000 / 10)) {
-                    MemoryRegion.deallocate(memory_region, i * 10, 5);
-                };
-
-                var prev_address = 70;
-                for ((address, size) in MemoryRegion.deallocatedBlocksInRange(memory_region, 70, 4500)) {
-                    assert size == 5;
-                    assert address == prev_address;
-                    let ?block_size = MaxBpTree.get(memory_region.free_memory, Cmp.Nat, address);
-                    assert size <= block_size;
-                    prev_address += 10;
-                };
-
-                assert prev_address == 4500;
-
-                prev_address := 7500;
-                for ((address, size) in MemoryRegion.deallocatedBlocksInRange(memory_region, 7500, 10_000)) {
-                    assert size == 5;
-                    assert address == prev_address;
-                    let ?block_size = MaxBpTree.get(memory_region.free_memory, Cmp.Nat, address);
-                    assert size <= block_size;
-                    prev_address += 10;
-                };
-
-                assert prev_address == 10_000;
-            },
-        );
-
-        test(
-            "allocatedBlocksInRange()",
+        suite(
+            "range operations",
             func() {
 
-                var prev_address = 75;
-                for ((address, size) in MemoryRegion.allocatedBlocksInRange(memory_region, 70, 9_900)) {
-                    assert size == 5;
-                    assert address == prev_address;
+                let allocated_address = MemoryRegion.allocate(memory_region, 100_000);
+                let deallocated_map = BpTree.new<Nat, Nat>(?32);
+                let allocated_map = BpTree.new<Nat, Nat>(?32);
 
-                    assert null == MaxBpTree.get(memory_region.free_memory, Cmp.Nat, address);
-                    prev_address += 10;
-                };
+                test(
+                    "deallocatedBlocksInRange() and allocatedBlocksInRange()",
+                    func() {
+                        // Debug.print("allocated address: " # debug_show allocated_address);
+                        // Debug.print("freed memory block: " # debug_show MemoryRegion.getFreeMemory(memory_region));
 
-                assert prev_address == 9_905;
-            },
+                        if (allocated_address != 0) {
+                            ignore BpTree.insert(deallocated_map, Cmp.Nat, 0, allocated_address);
+                        };
+
+                        // allocate random memory blocks first, then deallocate some and keep track of both
+                        var address = allocated_address;
+                        for (i in Itertools.range(0, 10)) {
+                            let size_remaining_allocated = fuzz.nat.randomRange(1, 40);
+                            ignore BpTree.insert(allocated_map, Cmp.Nat, address, size_remaining_allocated);
+                            address += size_remaining_allocated;
+
+                            let size_to_deallocate = fuzz.nat.randomRange(1, 40);
+                            MemoryRegion.deallocate(memory_region, address, size_to_deallocate);
+                            ignore BpTree.insert(deallocated_map, Cmp.Nat, address, size_to_deallocate);
+                            address += size_to_deallocate;
+                        };
+
+                        ignore BpTree.insert(allocated_map, Cmp.Nat, address, (allocated_address + 100_000) - address);
+
+                        let ranges = Array.tabulate<(Nat, Nat)>(
+                            100,
+                            func(i : Nat) : (Nat, Nat) {
+                                let start = fuzz.nat.randomRange(allocated_address - 100, allocated_address + 100_000);
+
+                                let end = fuzz.nat.randomRange(start + 1, Nat.min(start + 10_000, MemoryRegion.size(memory_region)));
+
+                                (start, end);
+                            },
+                        );
+
+                        // Debug.print("ranges: " # debug_show ranges);
+
+                        for ((start, end) in ranges.vals()) {
+
+                            for ((address, size) in MemoryRegion.deallocatedBlocksInRange(memory_region, start, end)) {
+                                let ?deallocated_size = BpTree.get(deallocated_map, Cmp.Nat, address) else {
+                                    Debug.trap("Deallocated address not found in deallocated_map " # debug_show (address, size));
+                                };
+
+                                if (size != deallocated_size) {
+                                    Debug.trap("Deallocated size does not match deallocated_map address (" # debug_show (address) # ") -> " # debug_show (size, deallocated_size));
+                                };
+
+                            };
+
+                            for ((i, (address, size)) in Itertools.enumerate(MemoryRegion.allocatedBlocksInRange(memory_region, start, end))) {
+                                if (i == 0) {
+                                    let ?floor = BpTree.getFloor(allocated_map, Cmp.Nat, address) else {
+                                        Debug.trap("Allocated address not found in allocated_map " # debug_show (address, size));
+                                    };
+
+                                    assert floor.0 + floor.1 >= address + size;
+
+                                } else {
+                                    let ?allocated_size = BpTree.get(allocated_map, Cmp.Nat, address) else {
+                                        Debug.trap("Allocated address not found in allocated_map " # debug_show (address, size));
+                                    };
+
+                                    if (size != allocated_size) {
+                                        Debug.trap("Allocated size does not match allocated_map address (" # debug_show (address) # ") -> " # debug_show (size, allocated_size));
+                                    };
+
+                                };
+
+                            };
+
+                        };
+
+                        for ((address, size) in MemoryRegion.deallocatedBlocksInRange(memory_region, 0, MemoryRegion.size(memory_region))) {
+                            let ?deallocated_size = BpTree.get(deallocated_map, Cmp.Nat, address) else {
+                                Debug.trap("Deallocated address not found in deallocated_map " # debug_show (address, size));
+                            };
+
+                            if (size != deallocated_size) {
+                                Debug.trap("Deallocated size does not match deallocated_map address (" # debug_show (address) # ") -> " # debug_show (size, deallocated_size));
+                            };
+
+                        };
+
+                        for ((address, size) in MemoryRegion.allocatedBlocksInRange(memory_region, 0, MemoryRegion.size(memory_region))) {
+                            let ?allocated_size = BpTree.get(allocated_map, Cmp.Nat, address) else {
+                                Debug.trap("Allocated address not found in allocated_map " # debug_show (address, size));
+                            };
+
+                            if (size != allocated_size) {
+                                Debug.trap("Allocated size does not match allocated_map address (" # debug_show (address) # ") -> " # debug_show (size, allocated_size));
+                            };
+                        };
+
+                    },
+                );
+
+                test(
+                    "deallocateRange()",
+                    func() {
+
+                        let ranges = Array.tabulate<(Nat, Nat)>(
+                            100,
+                            func(i : Nat) : (Nat, Nat) {
+                                let start = fuzz.nat.randomRange(allocated_address - 100, allocated_address + 100_000);
+                                let end = fuzz.nat.randomRange(start + 1, Nat.min(start + 10_000, MemoryRegion.size(memory_region)));
+
+                                (start, end);
+                            },
+                        );
+
+                        for ((start, end) in ranges.vals()) {
+                            let allocated_blocks_in_range = Buffer.Buffer<(Nat, Nat)>(1000);
+
+                            var address = start;
+
+                            // Debug.print("range: " # debug_show (start, end));
+
+                            for (freed_memory_block in MemoryRegion.deallocatedBlocksInRange(memory_region, start, end)) {
+                                // Debug.print("freed memory block: " # debug_show freed_memory_block);
+                                // Debug.print("address: " # debug_show address);
+                                // assert address <= freed_memory_block.0;
+
+                                if (address < freed_memory_block.0) {
+                                    allocated_blocks_in_range.add(address, freed_memory_block.0 - address);
+                                };
+
+                                address := freed_memory_block.0 + freed_memory_block.1;
+
+                            };
+
+                            if (address < end) {
+                                allocated_blocks_in_range.add(address, end - address);
+                            };
+
+                            // Debug.print("deallocating range: " # debug_show (start, end));
+
+                            MemoryRegion.deallocateRange(memory_region, start, end);
+
+                            // Debug.print("free memory blocks: " # debug_show MemoryRegion.getFreeMemory(memory_region));
+                            // Debug.print("allocated blocks in range: " # debug_show Buffer.toArray(allocated_blocks_in_range));
+
+                            for ((address, size) in allocated_blocks_in_range.vals()) {
+                                assert MemoryRegion.isFreed(memory_region, address, size) == #ok(true);
+                            };
+
+                            //  for ((address, size) in allocated_blocks_in_range.vals()) {
+                            //     // re-allocate the freed memory blocks to deallocating the same block in the next iteration
+                            //     MemoryRegion.a
+                            // };
+
+                        };
+
+                    },
+                );
+            }
+
         );
 
-        test(
-            "deallocateRange()",
-            func() {
-
-                let start = 4500;
-                let end = 7900;
-
-                MemoryRegion.deallocateRange(memory_region, 4500, 7900);
-
-                for ((address, size) in MemoryRegion.allocatedBlocksInRange(memory_region, 0, 10_000)) {
-                    assert address < start or address > end;
-                };
-            },
-        );
     },
 );

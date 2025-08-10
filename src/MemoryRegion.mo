@@ -252,17 +252,34 @@ module MemoryRegion {
     /// To get the true size of the memory region you need to call `capacity()`.
     public func clear(self : MemoryRegion) {
         MaxBpTree.clear(self.free_memory);
-        self.size := 0;
-        self.deallocated := 0;
+        ignore MaxBpTree.insert(self.free_memory, Cmp.Nat, Cmp.Nat, 0, self.size);
+
+        self.deallocated := self.size;
     };
+
+    // public func clone(self : MemoryRegion) : MemoryRegion {
+    //     let region = Region.new();
+    //     let cloned_free_memory = MaxBpTree.clone(self.free_memory);
+    //
+    //   // todo: copy the region data
+    //
+    //     {
+    //         region;
+    //         free_memory = cloned_free_memory;
+    //         deallocated = self.deallocated;
+    //         size = self.size;
+    //         pages = self.pages;
+    //     };
+    // };
 
     /// Deallocate all blocks in the given range.
     /// The range is inclusive of the start and exclusive of the end. `[start, end)`
     public func deallocateRange(self : MemoryRegion, start : Nat, end : Nat) {
-        let allocated_blocks = allocatedBlocksInRange(self, start, end)
-        |> Iter.toArray(_).vals(); // creates a copy of the iterator that does not update when the memory region changes
 
-        for (block in allocated_blocks) {
+        // creates a static copy of the iterator that does not slip when the memory region is updated
+        let allocated_blocks = Iter.toArray(allocatedBlocksInRange(self, start, end));
+
+        for (block in allocated_blocks.vals()) {
             deallocate(self, block.0, block.1);
         };
     };
@@ -279,25 +296,35 @@ module MemoryRegion {
         var start_address = start;
         let end_address = Nat.min(self.size, end);
 
-        let deallocated_blocks = deallocatedBlocksInRange(self, start_address, end_address);
+        let deallocated_blocks = Itertools.peekable(
+            deallocatedBlocksInRange(self, start_address, end_address)
+        );
+
+        PeekableIter.skipWhile(
+            deallocated_blocks,
+            func(block : MemoryBlock) : Bool {
+                // Debug.print("skipping deallocated block: " # debug_show block);
+                if (block.0 <= start_address) {
+                    start_address := block.0 + block.1;
+                    return true;
+                };
+
+                false;
+            },
+        );
 
         let iter = Iter.map<MemoryBlock, MemoryBlock>(
-            Itertools.add(
-                Itertools.skipWhile(
-                    deallocated_blocks,
-                    func(block : MemoryBlock) : Bool {
-                        if (block.0 <= start_address) {
-                            start_address := block.0 + block.1;
-                            return true;
-                        };
-
-                        false;
-                    },
-                ),
-                (end_address, 0),
-            ),
+            if (start_address < end_address) {
+                Itertools.add<(Nat, Nat)>(deallocated_blocks, (end_address, 0));
+            } else {
+                deallocated_blocks;
+            },
             func(deallocated_block : MemoryBlock) : MemoryBlock {
                 // assert start_address <= deallocated_block.0;
+                if (start_address > deallocated_block.0) {
+                    return (start_address, 0); // will be skipped at the end
+                };
+
                 let size = deallocated_block.0 - start_address;
                 let allocated_block = (start_address, size);
                 start_address := deallocated_block.0 + deallocated_block.1;
