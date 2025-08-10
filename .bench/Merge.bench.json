@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "moc": "0.14.13",
+  "replica": "dfx",
+  "replicaVersion": "0.28.0",
+  "gc": "incremental",
+  "forceGc": true,
+  "results": [
+    [
+      "no merge (insert):MemoryRegion",
+      {
+        "rts_stable_memory_size": 0,
+        "stable_memory_size": 0,
+        "instructions": 138798307,
+        "rts_memory_size": 0,
+        "rts_total_allocation": 1651040,
+        "rts_collector_instructions": 6497617,
+        "rts_mutator_instructions": -13063,
+        "rts_logical_stable_memory_size": 0,
+        "rts_heap_size": 1651040,
+        "rts_reclaimed": 0
+      }
+    ],
+    [
+      "merge prev:MemoryRegion",
+      {
+        "rts_stable_memory_size": 0,
+        "stable_memory_size": 0,
+        "instructions": 256219537,
+        "rts_memory_size": 0,
+        "rts_total_allocation": 2236952,
+        "rts_collector_instructions": 21582,
+        "rts_mutator_instructions": -10592,
+        "rts_logical_stable_memory_size": 0,
+        "rts_heap_size": 2236952,
+        "rts_reclaimed": 0
+      }
+    ],
+    [
+      "merge next:MemoryRegion",
+      {
+        "rts_stable_memory_size": 0,
+        "stable_memory_size": 0,
+        "instructions": 137026116,
+        "rts_memory_size": 0,
+        "rts_total_allocation": 1178276,
+        "rts_collector_instructions": -11879,
+        "rts_mutator_instructions": -10592,
+        "rts_logical_stable_memory_size": 0,
+        "rts_heap_size": 1178276,
+        "rts_reclaimed": 0
+      }
+    ],
+    [
+      "merge prev and next:MemoryRegion",
+      {
+        "rts_stable_memory_size": 0,
+        "stable_memory_size": 0,
+        "instructions": 245649829,
+        "rts_memory_size": 0,
+        "rts_total_allocation": 1913656,
+        "rts_collector_instructions": -6481794,
+        "rts_mutator_instructions": -10592,
+        "rts_logical_stable_memory_size": 0,
+        "rts_heap_size": 1913656,
+        "rts_reclaimed": 0
+      }
+    ]
+  ]
+}

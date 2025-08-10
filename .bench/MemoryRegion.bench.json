@@ -1,0 +1,160 @@
+{
+  "version": 1,
+  "moc": "0.14.13",
+  "replica": "dfx",
+  "replicaVersion": "0.28.0",
+  "gc": "incremental",
+  "forceGc": true,
+  "results": [
+    [
+      "allocate():MemoryRegion",
+      {
+        "rts_stable_memory_size": 768,
+        "stable_memory_size": 0,
+        "instructions": 9438475,
+        "rts_memory_size": 0,
+        "rts_total_allocation": 34428,
+        "rts_collector_instructions": 116270,
+        "rts_mutator_instructions": -13063,
+        "rts_logical_stable_memory_size": 768,
+        "rts_heap_size": 34428,
+        "rts_reclaimed": 0
+      }
+    ],
+    [
+      "allocate():VersionedMemoryRegion",
+      {
+        "rts_stable_memory_size": 768,
+        "stable_memory_size": 0,
+        "instructions": 9689420,
+        "rts_memory_size": 0,
+        "rts_total_allocation": 34416,
+        "rts_collector_instructions": 116270,
+        "rts_mutator_instructions": -10592,
+        "rts_logical_stable_memory_size": 768,
+        "rts_heap_size": 34416,
+        "rts_reclaimed": 0
+      }
+    ],
+    [
+      "deallocate():MemoryRegion",
+      {
+        "rts_stable_memory_size": 0,
+        "stable_memory_size": 0,
+        "instructions": 164367062,
+        "rts_memory_size": 0,
+        "rts_total_allocation": 1559968,
+        "rts_collector_instructions": 3030002,
+        "rts_mutator_instructions": -10592,
+        "rts_logical_stable_memory_size": 0,
+        "rts_heap_size": 1559968,
+        "rts_reclaimed": 0
+      }
+    ],
+    [
+      "deallocate():VersionedMemoryRegion",
+      {
+        "rts_stable_memory_size": 0,
+        "stable_memory_size": 0,
+        "instructions": 160686101,
+        "rts_memory_size": 0,
+        "rts_total_allocation": 1569636,
+        "rts_collector_instructions": 4505289,
+        "rts_mutator_instructions": -10592,
+        "rts_logical_stable_memory_size": 0,
+        "rts_heap_size": 1569636,
+        "rts_reclaimed": 0
+      }
+    ],
+    [
+      "using allocate() to reallocate stored blocks:MemoryRegion",
+      {
+        "rts_stable_memory_size": 256,
+        "stable_memory_size": 0,
+        "instructions": 260600203,
+        "rts_memory_size": 0,
+        "rts_total_allocation": 5781488,
+        "rts_collector_instructions": 5442,
+        "rts_mutator_instructions": -10592,
+        "rts_logical_stable_memory_size": 256,
+        "rts_heap_size": 5781488,
+        "rts_reclaimed": 0
+      }
+    ],
+    [
+      "using allocate() to reallocate stored blocks:VersionedMemoryRegion",
+      {
+        "rts_stable_memory_size": 384,
+        "stable_memory_size": 0,
+        "instructions": 271940285,
+        "rts_memory_size": 0,
+        "rts_total_allocation": 6331064,
+        "rts_collector_instructions": 4478,
+        "rts_mutator_instructions": -10592,
+        "rts_logical_stable_memory_size": 384,
+        "rts_heap_size": 6331064,
+        "rts_reclaimed": 0
+      }
+    ],
+    [
+      "Preliminary Step: Sort Addresses:MemoryRegion",
+      {
+        "rts_stable_memory_size": 0,
+        "stable_memory_size": 0,
+        "instructions": 244841617,
+        "rts_memory_size": 0,
+        "rts_total_allocation": 5886916,
+        "rts_collector_instructions": 6270,
+        "rts_mutator_instructions": -10592,
+        "rts_logical_stable_memory_size": 0,
+        "rts_heap_size": 5886916,
+        "rts_reclaimed": 0
+      }
+    ],
+    [
+      "Preliminary Step: Sort Addresses:VersionedMemoryRegion",
+      {
+        "rts_stable_memory_size": 0,
+        "stable_memory_size": 0,
+        "instructions": 244953419,
+        "rts_memory_size": 0,
+        "rts_total_allocation": 5891356,
+        "rts_collector_instructions": 6270,
+        "rts_mutator_instructions": -10592,
+        "rts_logical_stable_memory_size": 0,
+        "rts_heap_size": 5891356,
+        "rts_reclaimed": 0
+      }
+    ],
+    [
+      "deallocate() worst case:MemoryRegion",
+      {
+        "rts_stable_memory_size": 0,
+        "stable_memory_size": 0,
+        "instructions": 205864832,
+        "rts_memory_size": 0,
+        "rts_total_allocation": 1720788,
+        "rts_collector_instructions": -1660127,
+        "rts_mutator_instructions": -10592,
+        "rts_logical_stable_memory_size": 0,
+        "rts_heap_size": 1720788,
+        "rts_reclaimed": 0
+      }
+    ],
+    [
+      "deallocate() worst case:VersionedMemoryRegion",
+      {
+        "rts_stable_memory_size": 0,
+        "stable_memory_size": 0,
+        "instructions": 204618931,
+        "rts_memory_size": 0,
+        "rts_total_allocation": 1699592,
+        "rts_collector_instructions": -1161854,
+        "rts_mutator_instructions": -10592,
+        "rts_logical_stable_memory_size": 0,
+        "rts_heap_size": 1699592,
+        "rts_reclaimed": 0
+      }
+    ]
+  ]
+}
