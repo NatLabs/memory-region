@@ -65,15 +65,15 @@ Saving results to .bench/MemoryRegion.bench.json
 
 <details>
 
-<summary>bench/Merge.bench.mo $({\color{green}-0.08\%})$</summary>
+<summary>bench/Merge.bench.mo $({\color{red}+0.02\%})$</summary>
 
 ### MemoryRegion merge performance
 
 _Benchmarking with 10k entries_
 
 
-Instructions: ${\color{green}-0.07\\%}$
-Heap: ${\color{green}-0.01\\%}$
+Instructions: ${\color{red}+0.04\\%}$
+Heap: ${\color{green}-0.02\\%}$
 Stable Memory: ${\color{gray}0\\%}$
 Garbage Collection: ${\color{gray}0\\%}$
 
@@ -82,20 +82,20 @@ Garbage Collection: ${\color{gray}0\\%}$
 
 |                     |                            MemoryRegion |
 | :------------------ | --------------------------------------: |
-| no merge (insert)   |   138_874_914 $({\color{red}+0.06\\%})$ |
-| merge prev          | 255_606_932 $({\color{green}-0.24\\%})$ |
-| merge next          | 136_932_276 $({\color{green}-0.07\\%})$ |
-| merge prev and next | 245_625_879 $({\color{green}-0.01\\%})$ |
+| no merge (insert)   | 138_851_315 $({\color{green}-0.02\\%})$ |
+| merge prev          |   256_010_684 $({\color{red}+0.16\\%})$ |
+| merge next          |   136_933_566 $({\color{red}+0.00\\%})$ |
+| merge prev and next |   245_638_644 $({\color{red}+0.01\\%})$ |
 
 
 **Heap**
 
 |                     |                         MemoryRegion |
 | :------------------ | -----------------------------------: |
-| no merge (insert)   |   1.58 MiB $({\color{red}+0.04\\%})$ |
-| merge prev          | 2.13 MiB $({\color{green}-0.08\\%})$ |
+| no merge (insert)   | 1.57 MiB $({\color{green}-0.08\\%})$ |
+| merge prev          | 2.13 MiB $({\color{green}-0.03\\%})$ |
 | merge next          |      1.12 MiB $({\color{gray}0\\%})$ |
-| merge prev and next | 1.82 MiB $({\color{green}-0.02\\%})$ |
+| merge prev and next |   1.83 MiB $({\color{red}+0.03\\%})$ |
 
 
 **Garbage Collection**
