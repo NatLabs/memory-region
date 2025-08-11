@@ -554,7 +554,7 @@ suite(
 
                         // allocate random memory blocks first, then deallocate some and keep track of both
                         var address = allocated_address;
-                        for (i in Itertools.range(0, 10)) {
+                        for (i in Itertools.range(0, 1000)) {
                             let size_remaining_allocated = fuzz.nat.randomRange(1, 40);
                             ignore BpTree.insert(allocated_map, Cmp.Nat, address, size_remaining_allocated);
                             address += size_remaining_allocated;
@@ -565,7 +565,15 @@ suite(
                             address += size_to_deallocate;
                         };
 
-                        ignore BpTree.insert(allocated_map, Cmp.Nat, address, (allocated_address + 100_000) - address);
+                        ignore BpTree.insert(
+                            allocated_map,
+                            Cmp.Nat,
+                            address,
+                            Nat.min(
+                                (allocated_address + 100_000) - address,
+                                MemoryRegion.size(memory_region) - address,
+                            ),
+                        );
 
                         let ranges = Array.tabulate<(Nat, Nat)>(
                             100,
@@ -593,7 +601,9 @@ suite(
 
                             };
 
-                            for ((i, (address, size)) in Itertools.enumerate(MemoryRegion.allocatedBlocksInRange(memory_region, start, end))) {
+                            let allocated_blocks_to_traverse = Iter.toArray(MemoryRegion.allocatedBlocksInRange(memory_region, start, end));
+
+                            for ((i, (address, size)) in Itertools.enumerate(allocated_blocks_to_traverse.vals())) {
                                 if (i == 0) {
                                     let ?floor = BpTree.getFloor(allocated_map, Cmp.Nat, address) else {
                                         Debug.trap("Allocated address not found in allocated_map " # debug_show (address, size));
@@ -601,6 +611,11 @@ suite(
 
                                     assert floor.0 + floor.1 >= address + size;
 
+                                } else if (i + 1 == allocated_blocks_to_traverse.size()) {
+                                    let ?allocated_size = BpTree.get(allocated_map, Cmp.Nat, address) else {
+                                        Debug.trap("Allocated address not found in allocated_map " # debug_show (address, size));
+                                    };
+                                    assert allocated_size >= size;
                                 } else {
                                     let ?allocated_size = BpTree.get(allocated_map, Cmp.Nat, address) else {
                                         Debug.trap("Allocated address not found in allocated_map " # debug_show (address, size));
