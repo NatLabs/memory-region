@@ -247,14 +247,35 @@ module MemoryRegion {
 
     };
 
-    /// Clears the memory region and deallocates all blocks.
-    /// Note however that the deallocated blocks are not garbage collected, they are just marked so they can be reused.
-    /// To get the true size of the memory region you need to call `capacity()`.
+    /// Clears the memory region by deallocating all blocks.
+    /// The deallocated blocks are marked as free and can be reused for future allocations.
+    ///
+    /// Note: 
+    /// - This does not release the underlying region memory pages. Use `capacity()` to get the total allocated memory including freed space.
+    /// - Previously allocated memory addresses may be reused. If you have a header section at the start of the memory region that should be preserved, use `clearAndRetainHeader()` instead.
     public func clear(self : MemoryRegion) {
         MaxBpTree.clear(self.free_memory);
         ignore MaxBpTree.insert(self.free_memory, Cmp.Nat, Cmp.Nat, 0, self.size);
 
         self.deallocated := self.size;
+    };
+
+    /// Clears the memory region while preserving a header section at the start.
+    /// All memory after the header is marked as deallocated and can be reused for future allocations.
+    ///
+    /// Note:
+    /// - The header section (from address 0 to header_size) remains allocated and unchanged.
+    /// - This does not release the underlying region memory pages.
+    /// - Memory addresses after the header may be reused for future allocations.
+    public func clearAndRetainHeader(self : MemoryRegion, header_size : Nat) {
+        if (header_size > self.size) {
+            return Debug.trap("MemoryRegion.clearAndRetainHeader(): header size larger than memory region size");
+        };
+
+        MaxBpTree.clear(self.free_memory);
+        ignore MaxBpTree.insert(self.free_memory, Cmp.Nat, Cmp.Nat, header_size, self.size - header_size);
+
+        self.deallocated := self.size - header_size;
     };
 
     // public func clone(self : MemoryRegion) : MemoryRegion {

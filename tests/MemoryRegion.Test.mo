@@ -534,6 +534,64 @@ suite(
             },
         );
 
+        test(
+            "clearAndRetainHeader() - deallocate all memory blocks except header",
+            func() {
+                // Clear the memory region first to start fresh
+                MemoryRegion.clear(memory_region);
+                
+                // Allocate a contiguous block to work with
+                let test_block_size = 64 + 128 + 256 + 100;
+                let base_address = MemoryRegion.allocate(memory_region, test_block_size);
+                
+                // Store specific content in different sections
+                let header_blob = fuzz.blob.randomBlob(64);
+                MemoryRegion.storeBlob(memory_region, base_address, header_blob);
+                
+                let second_blob = fuzz.blob.randomBlob(128);
+                MemoryRegion.storeBlob(memory_region, base_address + 64, second_blob);
+                
+                let third_blob = fuzz.blob.randomBlob(256);
+                MemoryRegion.storeBlob(memory_region, base_address + 64 + 128, third_blob);
+                
+                let fourth_blob = fuzz.blob.randomBlob(100);
+                MemoryRegion.storeBlob(memory_region, base_address + 64 + 128 + 256, fourth_blob);
+
+                let prev_memory_info = MemoryRegion.memoryInfo(memory_region);
+                let header_size = base_address + 64; // Retain header from 0 to base_address + 64
+
+                // Clear and retain header
+                MemoryRegion.clearAndRetainHeader(memory_region, header_size);
+
+                // Verify header content is preserved
+                let loaded_header = MemoryRegion.loadBlob(memory_region, base_address, 64);
+                assert loaded_header == header_blob;
+
+                // Verify memory region state
+                assert MemoryRegion.size(memory_region) == prev_memory_info.size;
+                assert MemoryRegion.allocated(memory_region) == header_size;
+                assert MemoryRegion.deallocated(memory_region) == prev_memory_info.size - header_size;
+                assert MemoryRegion.pages(memory_region) == prev_memory_info.pages;
+                assert MemoryRegion.capacity(memory_region) == prev_memory_info.capacity;
+
+                // Verify free memory structure - should have one free block from header_size to end
+                assert MemoryRegion.getFreeMemory(memory_region) == [(header_size, prev_memory_info.size - header_size)];
+
+                // Verify that new allocations reuse the freed space after header
+                let new_blob = fuzz.blob.randomBlob(50);
+                let new_address = MemoryRegion.addBlob(memory_region, new_blob);
+                // Address should be somewhere in the freed region (worst-fit allocation, not best-fit)
+                assert new_address >= header_size and new_address + new_blob.size() <= prev_memory_info.size;
+
+                // Header should still be intact
+                let header_after_alloc = MemoryRegion.loadBlob(memory_region, base_address, 64);
+                assert header_after_alloc == header_blob;
+
+                // Clear the memory region for subsequent tests
+                MemoryRegion.clear(memory_region);
+            },
+        );
+
         suite(
             "range operations",
             func() {
