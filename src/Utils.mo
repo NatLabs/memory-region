@@ -1,9 +1,9 @@
-import Buffer "mo:base/Buffer";
-import Debug "mo:base/Debug";
+import Buffer "mo:base@0.14.13/Buffer";
+import Debug "mo:base@0.14.13/Debug";
 
-import Order "mo:base/Order";
-import Result "mo:base/Result";
-import Prelude "mo:base/Prelude";
+import Order "mo:base@0.14.13/Order";
+import Result "mo:base@0.14.13/Result";
+import Prelude "mo:base@0.14.13/Prelude";
 
 module {
     type Order = Order.Order;

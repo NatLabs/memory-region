@@ -1,7 +1,7 @@
-import Iter "mo:base/Iter";
-import Buffer "mo:base/Buffer";
-import Debug "mo:base/Debug";
-import Nat "mo:base/Nat";
+import Iter "mo:base@0.14.13/Iter";
+import Buffer "mo:base@0.14.13/Buffer";
+import Debug "mo:base@0.14.13/Debug";
+import Nat "mo:base@0.14.13/Nat";
 
 import Bench "mo:bench";
 import Fuzz "mo:fuzz";

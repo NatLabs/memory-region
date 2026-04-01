@@ -1,21 +1,19 @@
 // @testmode wasi
-import Array "mo:base/Array";
-import Blob "mo:base/Blob";
-import Buffer "mo:base/Buffer";
-import Debug "mo:base/Debug";
-import Iter "mo:base/Iter";
-import Nat "mo:base/Nat";
-import Nat8 "mo:base/Nat8";
-import Text "mo:base/Text";
+import Array "mo:base@0.14.13/Array";
+import Blob "mo:base@0.14.13/Blob";
+import Buffer "mo:base@0.14.13/Buffer";
+import Debug "mo:base@0.14.13/Debug";
+import Iter "mo:base@0.14.13/Iter";
+import Nat "mo:base@0.14.13/Nat";
 
 import { test; suite } "mo:test";
 import Fuzz "mo:fuzz";
-import MaxBpTree "mo:augmented-btrees/MaxBpTree";
-import BpTree "mo:augmented-btrees/BpTree";
-import Cmp "mo:augmented-btrees/Cmp";
-import MaxBpTreeMethods "mo:augmented-btrees/MaxBpTree/Methods";
+import MaxBpTree "mo:augmented-btrees@0.9.0/MaxBpTree";
+import BpTree "mo:augmented-btrees@0.9.0/BpTree";
+import Cmp "mo:augmented-btrees@0.9.0/Cmp";
+import MaxBpTreeMethods "mo:augmented-btrees@0.9.0/MaxBpTree/Methods";
 
-import Itertools "mo:itertools/Iter";
+import Itertools "mo:itertools@0.2.2/Iter";
 
 import MemoryRegion "../src/MemoryRegion";
 import Utils "../src/Utils";

@@ -1,10 +1,10 @@
-import Debug "mo:base/Debug";
+import Debug "mo:base@0.14.13/Debug";
 
-import MaxBpTree "mo:augmented-btrees/MaxBpTree";
-import Cmp "mo:augmented-btrees/Cmp";
-import BTree "mo:stableheapbtreemap/BTree";
-import Set "mo:map/Set";
-import Nat "mo:base/Nat";
+import MaxBpTree "mo:augmented-btrees@0.9.0/MaxBpTree";
+import Cmp "mo:augmented-btrees@0.9.0/Cmp";
+import BTree "mo:stableheapbtreemap@1.5.0/BTree";
+import Set "mo:map@9.0.1/Set";
+import Nat "mo:base@0.14.13/Nat";
 
 module {
 

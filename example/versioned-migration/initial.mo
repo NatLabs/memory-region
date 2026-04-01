@@ -1,6 +1,6 @@
 import MemoryRegionV0_1_1 "mo:memory-region-v0_1_1/MemoryRegion";
-import Map "mo:map/Map";
-import Debug "mo:base/Debug";
+import Map "mo:map@9.0.1/Map";
+import Debug "mo:base@0.14.13/Debug";
 
 actor {
     stable let _memory_region = MemoryRegionV0_1_1.new();

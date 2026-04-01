@@ -1,6 +1,6 @@
-import Region "mo:base/Region";
-import Result "mo:base/Result";
-import Iter "mo:base/Iter";
+import Region "mo:base@0.14.13/Region";
+import Result "mo:base@0.14.13/Result";
+import Iter "mo:base@0.14.13/Iter";
 
 import FreeMemory "FreeMemory";
 import Migrations "Migrations";

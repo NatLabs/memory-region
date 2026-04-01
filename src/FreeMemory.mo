@@ -1,19 +1,19 @@
-import Result "mo:base/Result";
-import Nat "mo:base/Nat";
-import Int "mo:base/Int";
-import Nat64 "mo:base/Nat64";
-import Debug "mo:base/Debug";
-import Option "mo:base/Option";
+import Result "mo:base@0.14.13/Result";
+import Nat "mo:base@0.14.13/Nat";
+import Int "mo:base@0.14.13/Int";
+import Nat64 "mo:base@0.14.13/Nat64";
+import Debug "mo:base@0.14.13/Debug";
+import Option "mo:base@0.14.13/Option";
 
-import Cmp "mo:augmented-btrees/Cmp";
-import MaxBpTree "mo:augmented-btrees/MaxBpTree";
-import MaxBpTreeMethods "mo:augmented-btrees/MaxBpTree/Methods";
-import MaxBpTreeUtils "mo:augmented-btrees/internal/Utils";
-import ArrayMut "mo:augmented-btrees/internal/ArrayMut";
-import MaxBpTreeBranch "mo:augmented-btrees/MaxBpTree/Branch";
-import MaxBpTreeLeaf "mo:augmented-btrees/MaxBpTree/Leaf";
-import MaxBpTreeTypes "mo:augmented-btrees/MaxBpTree/Types";
-import RevIter "mo:itertools/RevIter";
+import Cmp "mo:augmented-btrees@0.9.0/Cmp";
+import MaxBpTree "mo:augmented-btrees@0.9.0/MaxBpTree";
+import MaxBpTreeMethods "mo:augmented-btrees@0.9.0/MaxBpTree/Methods";
+import MaxBpTreeUtils "mo:augmented-btrees@0.9.0/internal/Utils";
+import ArrayMut "mo:augmented-btrees@0.9.0/internal/ArrayMut";
+import MaxBpTreeBranch "mo:augmented-btrees@0.9.0/MaxBpTree/Branch";
+import MaxBpTreeLeaf "mo:augmented-btrees@0.9.0/MaxBpTree/Leaf";
+import MaxBpTreeTypes "mo:augmented-btrees@0.9.0/MaxBpTree/Types";
+import RevIter "mo:itertools@0.2.2/RevIter";
 
 module FreeMemory {
     type RevIter<A> = RevIter.RevIter<A>;
@@ -485,19 +485,19 @@ module FreeMemory {
         if (size < size_needed) return null;
 
         if (size == size_needed) {
-            // Debug.print("reallocate: removing block of size " # debug_show size);
-            // Debug.print(debug_show toArray(self));
             ignore MaxBpTree.remove(self, Cmp.Nat, Cmp.Nat, address);
             return ?address;
         };
 
         let split_size = (size - size_needed) : Nat;
 
-        // Debug.print("reallocate: splitting block of size " # debug_show size # " into " # debug_show (size_needed, split_size));
-        // update the size of the retrieved pointer in free memory
-        let ?max = MaxBpTree.replaceMaxValue(self, Cmp.Nat, Cmp.Nat, split_size) else Debug.trap("max block should exist");
+        // Use remove + insert instead of replaceMaxValue to avoid a bug in MaxBpTree
+        // where replaceMaxValue navigates via a stale MAX_INDEX to the wrong leaf,
+        // leaving the actual max-value entry unchanged and causing stale allocations.
+        ignore MaxBpTree.remove(self, Cmp.Nat, Cmp.Nat, address);
+        ignore MaxBpTree.insert(self, Cmp.Nat, Cmp.Nat, address, split_size);
 
-        let trimmed_address = max.0 + split_size;
+        let trimmed_address = address + split_size;
 
         return ?trimmed_address;
     };
